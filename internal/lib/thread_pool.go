@@ -4,14 +4,16 @@ import (
 	"sync"
 )
 
-type ThreadPool struct {
-	wg    sync.WaitGroup
-	queue chan func()
+type ThreadPool[T any] struct {
+	wg         sync.WaitGroup
+	queue      chan func() T
+	ResultChan chan T
 }
 
-func NewThreadPool(threadCount int, queueSize int) *ThreadPool {
-	tp := &ThreadPool{
-		queue: make(chan func(), queueSize),
+func NewThreadPool[T any](threadCount int, queueSize int, resultChan chan T) *ThreadPool[T] {
+	tp := &ThreadPool[T]{
+		queue:      make(chan func() T, queueSize),
+		ResultChan: resultChan,
 	}
 	tp.wg.Add(threadCount)
 
@@ -22,19 +24,20 @@ func NewThreadPool(threadCount int, queueSize int) *ThreadPool {
 	return tp
 }
 
-func (tp *ThreadPool) Queue(work func()) error {
+func (tp *ThreadPool[T]) Queue(work func() T) error {
 	tp.queue <- work
 	return nil
 }
 
-func (tp *ThreadPool) Wait() {
+func (tp *ThreadPool[T]) Wait() {
 	close(tp.queue) // Prevents hanging forever
 	tp.wg.Wait()
+	close(tp.ResultChan)
 }
 
-func (tp *ThreadPool) threadWorker() {
+func (tp *ThreadPool[T]) threadWorker() {
 	defer tp.wg.Done()
 	for work := range tp.queue {
-		work()
+		tp.ResultChan <- work()
 	}
 }

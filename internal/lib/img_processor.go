@@ -45,40 +45,40 @@ func process(
 	}
 
 	fResult := make(chan FilterResult, 1)
-	hashChan := make(chan HashResult)
-	tp := NewThreadPool(5, queueSize)
+	tp := NewThreadPool(5, queueSize, make(chan HashResult))
 
-	go filterImages(hashChan, fResult)
+	go filterImages(tp.ResultChan, fResult)
 
 	for _, entry := range dirEntries {
 		ext := path.Ext(entry)
 		if validExtensions[ext] {
 			if strings.HasPrefix(entry, hashPrefix) {
 				h := strings.TrimPrefix(strings.Split(entry, ".")[0], hashPrefix)
-				hashChan <- HashResult{
-					hash:   h,
-					path:   path.Join(dir, entry),
-					cached: true,
-				}
+				tp.Queue(func() HashResult {
+					return HashResult{
+						hash:   h,
+						path:   path.Join(dir, entry),
+						cached: true,
+					}
+				})
 				continue
 			}
-			tp.Queue(func() {
+			tp.Queue(func() HashResult {
 				file, err := fileOpener.Open(path.Join(dir, entry))
 				if err != nil {
-					hashChan <- HashResult{
+					return HashResult{
 						err: err,
 					}
-					return
 				}
 				defer file.Close()
-				hasher.Hash(file, path.Join(dir, entry), hashChan)
+				return hasher.Hash(file, path.Join(dir, entry))
 			})
 		}
 	}
 
 	tp.Wait()
-	close(hashChan)
 	filteredImages := <-fResult
+	fmt.Println(filteredImages)
 	return UpdateImages(filteredImages)
 }
 
@@ -131,42 +131,39 @@ func UpdateImages(fr FilterResult) error {
 		queueSize = workLen
 	}
 
-	errChan := make(chan error)
-	doneChan := make(chan bool)
+	tp := NewThreadPool(5, queueSize, make(chan error))
 	var errors []error
 
 	go func() {
-		for err := range errChan {
+		for err := range tp.ResultChan {
 			errors = append(errors, err)
 		}
-		close(doneChan)
 	}()
 
-	tp := NewThreadPool(5, queueSize)
 	for _, imgPath := range fr.dupeImageHashes {
-		tp.Queue(func() {
+		tp.Queue(func() error {
 			err := os.Remove(imgPath)
 			if err != nil {
-				errChan <- err
+				return err
 			}
+			return nil
 		})
 	}
 
 	for newImgHash, imgPath := range fr.newImageHashes {
-		tp.Queue(func() {
+		tp.Queue(func() error {
 			dir := path.Dir(imgPath)
 			ext := path.Ext(imgPath)
 			newFileName := path.Join(dir, hashPrefix+newImgHash+ext)
 			err := os.Rename(imgPath, newFileName)
 			if err != nil {
-				errChan <- err
+				return err
 			}
+			return nil
 		})
 	}
 
 	tp.Wait()
-	close(errChan)
-	<-doneChan
 
 	if len(errors) > 0 {
 		return fmt.Errorf("update errors: %v", errors)

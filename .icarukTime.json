@@ -1,0 +1,23 @@
+{
+    "idleHeartbeats": 10859,
+    "navigatingHeartbeats": 5714,
+    "totalCodingHeartbeats": 23897,
+    "languageHeartbeats": {
+        "toml": 308,
+        "go": 23019,
+        "markdown": 458,
+        "ignore": 46,
+        "plaintext": 66
+    },
+    "fileHeartbeats": {
+        ".air.toml": 308,
+        "internal/lib/thread_pool.go": 2601,
+        "cmd/hashimg/main.go": 12436,
+        "internal/lib/prompt.go": 85,
+        "c:\\Users\\exani\\InternxtDrive\\class_links_list.md": 458,
+        "internal/lib/file_processor.go": 368,
+        "internal/lib/img_processor.go": 7529,
+        ".gitignore": 46,
+        "f:\\go\\go_hashimg\\internal\\lib\\hasher.go.git": 66
+    }
+}

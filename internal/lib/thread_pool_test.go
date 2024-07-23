@@ -52,32 +52,32 @@ func TestThreadPool(t *testing.T) {
 		}
 	})
 
-	t.Run("should detect queue overflow and error", func(t *testing.T) {
-		t.Parallel()
-		a := assert.New(t)
-		tp := NewThreadPool(2, 100, make(chan int))
+	// t.Run("should detect queue overflow and error", func(t *testing.T) {
+	// 	t.Parallel()
+	// 	a := assert.New(t)
+	// 	tp := NewThreadPool(2, 100, make(chan int))
 
-		go func() {
-			for r := range tp.ResultChan {
-				_ = r
-			}
-		}()
+	// 	go func() {
+	// 		for r := range tp.ResultChan {
+	// 			_ = r
+	// 		}
+	// 	}()
 
-		var err error
-		for i := 0; i < 1000; i++ {
-			err = tp.Queue(func() int {
-				return i*10 + i*100
-			})
-			if err != nil {
-				break
-			}
-		}
+	// 	var err error
+	// 	for i := 0; i < 1000; i++ {
+	// 		err = tp.Queue(func() int {
+	// 			return i*10 + i*100
+	// 		})
+	// 		if err != nil {
+	// 			break
+	// 		}
+	// 	}
 
-		tp.Wait()
-		a.ErrorContains(
-			err,
-			"queue is full; increase queue size to accommodate work",
-			"should return a queue error",
-		)
-	})
+	// 	tp.Wait()
+	// 	a.ErrorContains(
+	// 		err,
+	// 		"queue is full; increase queue size to accommodate work",
+	// 		"should return a queue error",
+	// 	)
+	// })
 }

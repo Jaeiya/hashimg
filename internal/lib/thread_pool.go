@@ -1,7 +1,6 @@
 package lib
 
 import (
-	"fmt"
 	"sync"
 )
 
@@ -34,9 +33,6 @@ func NewThreadPool[T any](threadCount int, queueSize int, resultChan chan T) *Th
 }
 
 func (tp *ThreadPool[T]) Queue(work func() T) error {
-	if len(tp.queue) == cap(tp.queue) {
-		return fmt.Errorf("queue is full; increase queue size to accommodate work")
-	}
 	tp.queue <- work
 	return nil
 }

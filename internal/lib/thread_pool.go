@@ -11,8 +11,8 @@ type ThreadPool[T any] struct {
 }
 
 func NewThreadPool[T any](threadCount int, queueSize int, resultChan chan T) *ThreadPool[T] {
-	if queueSize == 0 {
-		panic("queue size must be greater than 0")
+	if queueSize < 10 {
+		panic("queue size should be at least 10")
 	}
 
 	if threadCount < 2 {

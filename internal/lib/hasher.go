@@ -7,12 +7,12 @@ import (
 )
 
 type ImgHasher interface {
-	Hash(reader io.Reader, path string) HashResult
+	Hash(reader io.Reader, path string, length int) HashResult
 }
 
 type MyHasher struct{}
 
-func (MyHasher) Hash(reader io.Reader, path string) HashResult {
+func (MyHasher) Hash(reader io.Reader, path string, length int) HashResult {
 	h := sha256.New()
 
 	if _, err := io.Copy(h, reader); err != nil {
@@ -22,7 +22,7 @@ func (MyHasher) Hash(reader io.Reader, path string) HashResult {
 	}
 
 	return HashResult{
-		hash:   fmt.Sprintf("%x", h.Sum(nil))[0:24],
+		hash:   fmt.Sprintf("%x", h.Sum(nil))[0:length],
 		path:   path,
 		cached: false,
 		err:    nil,

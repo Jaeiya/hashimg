@@ -71,7 +71,7 @@ func process(
 					}
 				}
 				defer file.Close()
-				return hasher.Hash(file, path.Join(dir, entry))
+				return hasher.Hash(file, path.Join(dir, entry), 24)
 			})
 		}
 	}

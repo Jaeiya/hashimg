@@ -32,9 +32,8 @@ func NewThreadPool[T any](threadCount int, queueSize int, resultChan chan T) *Th
 	return tp
 }
 
-func (tp *ThreadPool[T]) Queue(work func() T) error {
+func (tp *ThreadPool[T]) Queue(work func() T) {
 	tp.queue <- work
-	return nil
 }
 
 func (tp *ThreadPool[T]) Wait() {

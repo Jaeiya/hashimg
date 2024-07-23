@@ -28,57 +28,56 @@ func process(
 	fileOpener ImgFileOpener,
 	dir string,
 ) error {
-	dirEntries, err := dirReader.ReadDir(dir)
+	fileNames, err := dirReader.ReadDir(dir)
 	if err != nil {
 		return err
 	}
 
-	if len(dirEntries) == 0 {
+	if len(fileNames) == 0 {
 		return fmt.Errorf("no files found in %s", dir)
 	}
 
 	// We definitely don't need more than 100 for 5 threads, but
 	// if we have less than 100 images, we don't even need 100.
 	queueSize := 100
-	if len(dirEntries) < 100 {
-		queueSize = len(dirEntries)
+	if len(fileNames) < 100 {
+		queueSize = len(fileNames)
 	}
 
-	fResult := make(chan FilterResult, 1)
+	fResultChan := make(chan FilterResult, 1)
 	tp := NewThreadPool(5, queueSize, make(chan HashResult))
 
-	go filterImages(tp.ResultChan, fResult)
+	go filterImages(tp.ResultChan, fResultChan)
 
-	for _, entry := range dirEntries {
-		ext := path.Ext(entry)
+	for _, fn := range fileNames {
+		ext := path.Ext(fn)
 		if validExtensions[ext] {
-			if strings.HasPrefix(entry, hashPrefix) {
-				h := strings.TrimPrefix(strings.Split(entry, ".")[0], hashPrefix)
+			if strings.HasPrefix(fn, hashPrefix) {
+				h := strings.TrimPrefix(strings.Split(fn, ".")[0], hashPrefix)
 				tp.Queue(func() HashResult {
 					return HashResult{
 						hash:   h,
-						path:   path.Join(dir, entry),
+						path:   path.Join(dir, fn),
 						cached: true,
 					}
 				})
 				continue
 			}
 			tp.Queue(func() HashResult {
-				file, err := fileOpener.Open(path.Join(dir, entry))
+				file, err := fileOpener.Open(path.Join(dir, fn))
 				if err != nil {
 					return HashResult{
 						err: err,
 					}
 				}
 				defer file.Close()
-				return hasher.Hash(file, path.Join(dir, entry), 24)
+				return hasher.Hash(file, path.Join(dir, fn), 24)
 			})
 		}
 	}
 
 	tp.Wait()
-	filteredImages := <-fResult
-	fmt.Println(filteredImages)
+	filteredImages := <-fResultChan
 	return UpdateImages(filteredImages)
 }
 

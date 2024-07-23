@@ -131,8 +131,8 @@ func UpdateImages(fr FilterResult) error {
 	}
 
 	tp := NewThreadPool(5, queueSize, make(chan error))
-	var errors []error
 
+	var errors []error
 	go func() {
 		for err := range tp.ResultChan {
 			errors = append(errors, err)
@@ -164,9 +164,21 @@ func UpdateImages(fr FilterResult) error {
 
 	tp.Wait()
 
-	if len(errors) > 0 {
-		return fmt.Errorf("update errors: %v", errors)
+	fErrors := filterNils(errors)
+
+	if len(fErrors) > 0 {
+		return fmt.Errorf("update errors: %v", fErrors)
 	}
 
 	return nil
+}
+
+func filterNils(errs []error) []error {
+	var r []error
+	for _, v := range errs {
+		if v != nil {
+			r = append(r, v)
+		}
+	}
+	return r
 }

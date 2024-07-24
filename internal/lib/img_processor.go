@@ -39,7 +39,7 @@ func ProcessImages(dir string) error {
 	}
 
 	if len(fileNames) == 0 {
-		return fmt.Errorf("no files found in %s", dir)
+		return fmt.Errorf("no images found in %s", dir)
 	}
 
 	// We definitely don't need more than 100 for 5 threads, but

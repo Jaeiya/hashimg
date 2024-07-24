@@ -20,9 +20,9 @@ type ImageFilter struct {
 
 func (imgf *ImageFilter) FilterImages(fhiChan chan FileHashInfo, fr *FilteredImages) {
 	imgf.wg.Add(1)
-	defer imgf.wg.Done()
 
 	go func() {
+		defer imgf.wg.Done()
 		oldImageHashes := map[string]string{}
 		newImageHashes := map[string]string{}
 		dupeImageHashes := []string{}

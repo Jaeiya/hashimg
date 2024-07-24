@@ -1,10 +1,14 @@
 package lib
 
 import (
+	"crypto/sha256"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/jaeiya/go-template/internal"
 )
 
 const hashPrefix = "0x@"
@@ -18,17 +22,18 @@ var validExtensions = map[string]bool{
 	".webp": true,
 }
 
-func ProcessImages(dir string) error {
-	return process(MyDirReader{}, MyHasher{}, MyFileOpener{}, dir)
+type FileHashInfo struct {
+	hash string
+	// Path to the file
+	path string
+	// If image has already been hashed and prefixed
+	cached bool
+	// If an error occurs during processing
+	err error
 }
 
-func process(
-	dirReader ImgDirReader,
-	hasher ImgHasher,
-	fileOpener ImgFileOpener,
-	dir string,
-) error {
-	fileNames, err := dirReader.ReadDir(dir)
+func ProcessImages(dir string) error {
+	fileNames, err := getImgFileNames(dir)
 	if err != nil {
 		return err
 	}
@@ -44,82 +49,77 @@ func process(
 		queueSize = len(fileNames)
 	}
 
-	fResultChan := make(chan FilterResult, 1)
-	tp := NewThreadPool(5, queueSize, make(chan HashResult))
+	tp := NewThreadPool(5, queueSize, make(chan FileHashInfo))
 
-	go filterImages(tp.ResultChan, fResultChan)
+	filteredImages := FilteredImages{}
+	imgFilter := NewImageFilter()
+	imgFilter.FilterImages(tp.ResultChan, &filteredImages)
 
 	for _, fn := range fileNames {
-		ext := path.Ext(fn)
-		if validExtensions[ext] {
-			if strings.HasPrefix(fn, hashPrefix) {
-				h := strings.TrimPrefix(strings.Split(fn, ".")[0], hashPrefix)
-				tp.Queue(func() HashResult {
-					return HashResult{
-						hash:   h,
-						path:   path.Join(dir, fn),
-						cached: true,
-					}
-				})
-				continue
-			}
-			tp.Queue(func() HashResult {
-				file, err := fileOpener.Open(path.Join(dir, fn))
-				if err != nil {
-					return HashResult{
-						err: err,
-					}
+		if strings.HasPrefix(fn, hashPrefix) {
+			ext := path.Ext(fn)
+			h := strings.TrimPrefix(fn[0:len(fn)-len(ext)], hashPrefix)
+			tp.Queue(func() FileHashInfo {
+				return FileHashInfo{
+					hash:   h,
+					path:   path.Join(dir, fn),
+					cached: true,
 				}
-				defer file.Close()
-				return hasher.Hash(file, path.Join(dir, fn), 24)
 			})
+			continue
 		}
+		tp.Queue(func() FileHashInfo {
+			file, err := os.Open(path.Join(dir, fn))
+			if err != nil {
+				return FileHashInfo{
+					err: err,
+				}
+			}
+			defer file.Close()
+			return hash(file, path.Join(dir, fn), 24)
+		})
 	}
 
 	tp.Wait()
-	filteredImages := <-fResultChan
-	return UpdateImages(filteredImages)
+	imgFilter.Wait()
+	return updateImages(filteredImages)
 }
 
-func filterImages(hResult chan HashResult, fResult chan<- FilterResult) {
-	oldImageHashes := map[string]string{}
-	newImageHashes := map[string]string{}
-	dupeImageHashes := []string{}
-
-	for hr := range hResult {
-		if hr.err != nil {
-			fmt.Println(hr.err)
-			continue
-		}
-
-		if hr.cached {
-			oldImageHashes[hr.hash] = hr.path
-			continue
-		}
-
-		if _, ok := newImageHashes[hr.hash]; ok {
-			dupeImageHashes = append(dupeImageHashes, hr.path)
-			continue
-		}
-
-		newImageHashes[hr.hash] = hr.path
+func getImgFileNames(dir string) ([]string, error) {
+	dirEntries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
 	}
 
-	for oldImgHash := range oldImageHashes {
-		if imgPath, ok := newImageHashes[oldImgHash]; ok {
-			dupeImageHashes = append(dupeImageHashes, imgPath)
-			delete(newImageHashes, oldImgHash)
+	fileNames := []string{}
+	for _, entry := range dirEntries {
+		if entry.IsDir() || !validExtensions[path.Ext(entry.Name())] {
 			continue
+		}
+		fileNames = append(fileNames, entry.Name())
+	}
+
+	return fileNames, nil
+}
+
+func hash(reader io.ReadCloser, path string, length int) FileHashInfo {
+	h := sha256.New()
+
+	if _, err := io.Copy(h, reader); err != nil {
+		return FileHashInfo{
+			err: err,
 		}
 	}
 
-	fResult <- FilterResult{
-		newImageHashes:  newImageHashes,
-		dupeImageHashes: dupeImageHashes,
+	return FileHashInfo{
+		hash:   fmt.Sprintf("%x", h.Sum(nil))[0:length],
+		path:   path,
+		cached: false,
+		err:    nil,
 	}
 }
 
-func UpdateImages(fr FilterResult) error {
+func updateImages(fr FilteredImages) error {
 	if len(fr.dupeImageHashes) == 0 && len(fr.newImageHashes) == 0 {
 		return nil
 	}
@@ -164,21 +164,10 @@ func UpdateImages(fr FilterResult) error {
 
 	tp.Wait()
 
-	fErrors := filterNils(errors)
-
+	fErrors := internal.FilterNils(errors)
 	if len(fErrors) > 0 {
 		return fmt.Errorf("update errors: %v", fErrors)
 	}
 
 	return nil
-}
-
-func filterNils(errs []error) []error {
-	var r []error
-	for _, v := range errs {
-		if v != nil {
-			r = append(r, v)
-		}
-	}
-	return r
 }

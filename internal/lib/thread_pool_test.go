@@ -2,6 +2,7 @@ package lib
 
 import (
 	"sort"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,17 +28,17 @@ func TestThreadPool(t *testing.T) {
 	t.Run("should queue work and send to results channel", func(t *testing.T) {
 		t.Parallel()
 		a := assert.New(t)
-		tp := NewThreadPool(2, 100, make(chan int))
+		tp := NewThreadPool(5, 100, make(chan int))
 
-		for i := 0; i < 100; i++ {
-			tp.Queue(func() int {
-				return i*10 + i*100
-			})
-		}
+		workCount := 5000
 
-		var ints [100]int
+		ints := make([]int, workCount)
 
+		resultWg := sync.WaitGroup{}
+
+		resultWg.Add(1)
 		go func() {
+			defer resultWg.Done()
 			count := 0
 			for r := range tp.ResultChan {
 				ints[count] = r
@@ -45,11 +46,19 @@ func TestThreadPool(t *testing.T) {
 			}
 		}()
 
+		for i := 0; i < workCount; i++ {
+			tp.Queue(func() int {
+				return i*10 + i*100
+			})
+		}
+
 		tp.Wait()
+		resultWg.Wait()
 		sort.Ints(ints[:])
 		for i, ii := range ints {
 			a.Equal(i*10+i*100, ii)
 		}
+		a.Equal(workCount, len(ints))
 	})
 
 	// t.Run("should detect queue overflow and error", func(t *testing.T) {

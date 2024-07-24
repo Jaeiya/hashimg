@@ -13,7 +13,7 @@ import (
 
 const hashPrefix = "0x@"
 
-var validExtensions = map[string]bool{
+var validImgExtensions = map[string]bool{
 	".jpg":  true,
 	".jpeg": true,
 	".png":  true,
@@ -93,7 +93,7 @@ func getImgFileNames(dir string) ([]string, error) {
 
 	fileNames := []string{}
 	for _, entry := range dirEntries {
-		if entry.IsDir() || !validExtensions[path.Ext(entry.Name())] {
+		if entry.IsDir() || !validImgExtensions[path.Ext(entry.Name())] {
 			continue
 		}
 		fileNames = append(fileNames, entry.Name())

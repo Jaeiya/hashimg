@@ -46,7 +46,11 @@ func ProcessImages(dir string) error {
 	// if we have less than 100 images, we don't even need 100.
 	queueSize := 100
 	if len(fileNames) < 100 {
-		queueSize = len(fileNames)
+		if len(fileNames) < 10 {
+			queueSize = 10
+		} else {
+			queueSize = len(fileNames)
+		}
 	}
 
 	tp := NewThreadPool(5, queueSize, make(chan FileHashInfo))

@@ -91,7 +91,7 @@ func getImgFileNames(dir string) ([]string, error) {
 
 	fileNames := []string{}
 	for _, entry := range dirEntries {
-		if entry.IsDir() || !validImgExtensions[path.Ext(entry.Name())] {
+		if entry.IsDir() || !validImgExtensions[strings.ToLower(path.Ext(entry.Name()))] {
 			continue
 		}
 		fileNames = append(fileNames, entry.Name())
@@ -162,7 +162,9 @@ func updateImages(fr FilteredImages) (ProcessStats, error) {
 	for newImgHash, imgPath := range fr.newImageHashes {
 		tp.Queue(func() error {
 			dir := path.Dir(imgPath)
-			ext := path.Ext(imgPath)
+			// Extensions should always be lowercase even though the
+			// file system doesn't care
+			ext := strings.ToLower(path.Ext(imgPath))
 			newFileName := path.Join(dir, hashPrefix+newImgHash+ext)
 			err := os.Rename(imgPath, newFileName)
 			if err != nil {

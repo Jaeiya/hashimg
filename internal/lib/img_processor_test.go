@@ -43,6 +43,15 @@ func TestImageProcessor(t *testing.T) {
 			},
 		},
 		{
+			should:      "lowercase extension",
+			files:       []string{"test1.PNG", "test2.JPG"},
+			fileContent: []string{"test1", "test2"},
+			expectFiles: []string{
+				"0x@1b4f0e9851971998e7320785.png",
+				"0x@60303ae22b998861bce3b28f.jpg",
+			},
+		},
+		{
 			should: "ignore images with same hash",
 			files: []string{
 				"0x@1b4f0e9851971998e7320785.png",
@@ -166,7 +175,7 @@ func TestImageProcessor(t *testing.T) {
 			fileNames, err = readDir(dir)
 			a.NoError(err)
 			for _, fn := range fileNames {
-				a.Contains(d.expectFiles, fn)
+				a.Contains(d.expectFiles, fn, "expected files should contain actual file")
 			}
 
 			a.Equal(len(d.expectFiles), len(fileNames))

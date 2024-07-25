@@ -53,7 +53,7 @@ func ProcessImages(dir string) (ProcessStats, error) {
 		queueSize = 10
 	}
 
-	tp := NewThreadPool(20, queueSize, make(chan FileHashInfo))
+	tp := NewThreadPool(10, queueSize, make(chan FileHashInfo))
 
 	filteredImages := FilteredImages{}
 	imgFilter := NewImageFilter()
@@ -139,7 +139,7 @@ func updateImages(fr FilteredImages) (ProcessStats, error) {
 		}
 	}
 
-	tp := NewThreadPool(5, queueSize, make(chan error))
+	tp := NewThreadPool(10, queueSize, make(chan error))
 
 	var errors []error
 	go func() {

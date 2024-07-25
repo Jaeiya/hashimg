@@ -1,8 +1,8 @@
 package main
 
 import (
+	"fmt"
 	"os"
-	"path"
 
 	"github.com/jaeiya/go-template/internal/lib"
 )
@@ -59,10 +59,18 @@ import (
 	  be hashed.
 */
 func main() {
-	wd, _ := os.Getwd()
-	dir := path.Join(wd, "test", "in_dir", "all")
-	err := lib.ProcessImages(dir)
+	wd, err := os.Getwd()
 	if err != nil {
 		panic(err)
 	}
+
+	fmt.Println("\nProcessing: ", wd, "\n")
+	stats, err := lib.ProcessImages(wd)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(" Total:", stats.Total)
+	fmt.Println("Cached:", stats.New)
+	fmt.Println(" Dupes:", stats.Dup)
 }

@@ -73,14 +73,7 @@ func ProcessImages(dir string) (ProcessStats, error) {
 			continue
 		}
 		tp.Queue(func() FileHashInfo {
-			file, err := os.Open(path.Join(dir, fn))
-			if err != nil {
-				return FileHashInfo{
-					err: err,
-				}
-			}
-			defer file.Close()
-			return hash(file, path.Join(dir, fn), 24)
+			return hash(path.Join(dir, fn), 24)
 		})
 	}
 
@@ -106,10 +99,18 @@ func getImgFileNames(dir string) ([]string, error) {
 	return fileNames, nil
 }
 
-func hash(reader io.ReadCloser, path string, length int) FileHashInfo {
+func hash(filePath string, length int) FileHashInfo {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return FileHashInfo{
+			err: err,
+		}
+	}
+	defer file.Close()
+
 	h := sha256.New()
 
-	if _, err := io.Copy(h, reader); err != nil {
+	if _, err := io.Copy(h, file); err != nil {
 		return FileHashInfo{
 			err: err,
 		}
@@ -117,7 +118,7 @@ func hash(reader io.ReadCloser, path string, length int) FileHashInfo {
 
 	return FileHashInfo{
 		hash:   fmt.Sprintf("%x", h.Sum(nil))[0:length],
-		path:   path,
+		path:   filePath,
 		cached: false,
 		err:    nil,
 	}

@@ -20,6 +20,7 @@ var validImgExtensions = map[string]bool{
 	".gif":  true,
 	".bmp":  true,
 	".webp": true,
+	".heic": true,
 }
 
 type FileHashInfo struct {

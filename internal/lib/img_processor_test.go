@@ -18,7 +18,7 @@ func TestImageProcessor(t *testing.T) {
 	t.Run("should error with invalid directory", func(t *testing.T) {
 		t.Parallel()
 		a := assert.New(t)
-		err := ProcessImages("invalid_dir")
+		_, err := ProcessImages("invalid_dir")
 		a.ErrorContains(err, "open invalid_dir: The system cannot find the file specified.")
 	})
 
@@ -26,7 +26,8 @@ func TestImageProcessor(t *testing.T) {
 		t.Parallel()
 		a := assert.New(t)
 		wd, _ := os.Getwd()
-		a.ErrorContains(ProcessImages(wd), "no images found in")
+		_, err := ProcessImages(wd)
+		a.ErrorContains(err, "no images found in")
 	})
 
 	md := []MockData{
@@ -159,7 +160,8 @@ func TestImageProcessor(t *testing.T) {
 				len(fileNames),
 				"should always have the same number of files as file content",
 			)
-			a.NoError(ProcessImages(dir))
+			_, err = (ProcessImages(dir))
+			a.NoError(err)
 
 			fileNames, err = readDir(dir)
 			a.NoError(err)

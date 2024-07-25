@@ -32,28 +32,28 @@ type FileHashInfo struct {
 	err error
 }
 
-func ProcessImages(dir string) error {
+type ProcessStats struct {
+	Total int
+	New   int
+	Dup   int
+}
+
+func ProcessImages(dir string) (ProcessStats, error) {
 	fileNames, err := getImgFileNames(dir)
 	if err != nil {
-		return err
+		return ProcessStats{}, err
 	}
 
 	if len(fileNames) == 0 {
-		return fmt.Errorf("no images found in %s", dir)
+		return ProcessStats{}, fmt.Errorf("no images found in %s", dir)
 	}
 
-	// We definitely don't need more than 100 for 5 threads, but
-	// if we have less than 100 images, we don't even need 100.
-	queueSize := 100
-	if len(fileNames) < 100 {
-		if len(fileNames) < 10 {
-			queueSize = 10
-		} else {
-			queueSize = len(fileNames)
-		}
+	queueSize := len(fileNames)
+	if queueSize < 10 {
+		queueSize = 10
 	}
 
-	tp := NewThreadPool(5, queueSize, make(chan FileHashInfo))
+	tp := NewThreadPool(20, queueSize, make(chan FileHashInfo))
 
 	filteredImages := FilteredImages{}
 	imgFilter := NewImageFilter()
@@ -123,9 +123,9 @@ func hash(reader io.ReadCloser, path string, length int) FileHashInfo {
 	}
 }
 
-func updateImages(fr FilteredImages) error {
+func updateImages(fr FilteredImages) (ProcessStats, error) {
 	if len(fr.dupeImageHashes) == 0 && len(fr.newImageHashes) == 0 {
-		return nil
+		return ProcessStats{}, nil
 	}
 
 	workLen := len(fr.dupeImageHashes) + len(fr.newImageHashes)
@@ -174,8 +174,12 @@ func updateImages(fr FilteredImages) error {
 
 	fErrors := internal.FilterNils(errors)
 	if len(fErrors) > 0 {
-		return fmt.Errorf("update errors: %v", fErrors)
+		return ProcessStats{}, fmt.Errorf("update errors: %v", fErrors)
 	}
 
-	return nil
+	return ProcessStats{
+		Total: workLen,
+		New:   len(fr.newImageHashes),
+		Dup:   len(fr.dupeImageHashes),
+	}, nil
 }

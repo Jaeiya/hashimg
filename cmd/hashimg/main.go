@@ -64,7 +64,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println("\nProcessing: ", wd, "\n")
+	fmt.Println("\nProcessing: ", wd)
 	stats, err := lib.ProcessImages(wd)
 	if err != nil {
 		panic(err)

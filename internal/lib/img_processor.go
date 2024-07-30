@@ -1,17 +1,13 @@
 package lib
 
 import (
-	"crypto/sha256"
 	"fmt"
-	"io"
 	"os"
 	"path"
 	"strings"
 
 	"github.com/jaeiya/go-template/internal"
 )
-
-const hashPrefix = "0x@"
 
 var validImgExtensions = map[string]bool{
 	".jpg":  true,
@@ -21,16 +17,6 @@ var validImgExtensions = map[string]bool{
 	".bmp":  true,
 	".webp": true,
 	".heic": true,
-}
-
-type FileHashInfo struct {
-	hash string
-	// Path to the file
-	path string
-	// If image has already been hashed and prefixed
-	cached bool
-	// If an error occurs during processing
-	err error
 }
 
 type ProcessStats struct {
@@ -54,33 +40,18 @@ func ProcessImages(dir string) (ProcessStats, error) {
 		queueSize = 10
 	}
 
-	tp := NewThreadPool(10, queueSize, make(chan FileHashInfo))
-
-	filteredImages := FilteredImages{}
-	imgFilter := NewImageFilter()
-	imgFilter.FilterImages(tp.ResultChan, &filteredImages)
+	hi := []HashInfo{}
+	hasher := NewHasher(24, 10, &hi)
 
 	for _, fn := range fileNames {
-		if strings.HasPrefix(fn, hashPrefix) {
-			ext := path.Ext(fn)
-			h := strings.TrimPrefix(fn[0:len(fn)-len(ext)], hashPrefix)
-			tp.Queue(func() FileHashInfo {
-				return FileHashInfo{
-					hash:   h,
-					path:   path.Join(dir, fn),
-					cached: true,
-				}
-			})
-			continue
-		}
-		tp.Queue(func() FileHashInfo {
-			return hash(path.Join(dir, fn), 24)
-		})
+		hasher.Hash(fn, path.Join(dir, fn))
 	}
 
-	tp.Wait()
-	imgFilter.Wait()
-	return updateImages(filteredImages)
+	hasher.Wait()
+	fi := &FilteredImages{}
+	imgFilter := NewImageFilter()
+	imgFilter.FilterImages(hi, fi)
+	return updateImages(*fi)
 }
 
 func getImgFileNames(dir string) ([]string, error) {
@@ -100,31 +71,6 @@ func getImgFileNames(dir string) ([]string, error) {
 	return fileNames, nil
 }
 
-func hash(filePath string, length int) FileHashInfo {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return FileHashInfo{
-			err: err,
-		}
-	}
-	defer file.Close()
-
-	h := sha256.New()
-
-	if _, err := io.Copy(h, file); err != nil {
-		return FileHashInfo{
-			err: err,
-		}
-	}
-
-	return FileHashInfo{
-		hash:   fmt.Sprintf("%x", h.Sum(nil))[0:length],
-		path:   filePath,
-		cached: false,
-		err:    nil,
-	}
-}
-
 func updateImages(fr FilteredImages) (ProcessStats, error) {
 	if len(fr.dupeImageHashes) == 0 && len(fr.newImageHashes) == 0 {
 		return ProcessStats{}, nil
@@ -140,7 +86,7 @@ func updateImages(fr FilteredImages) (ProcessStats, error) {
 		}
 	}
 
-	tp := NewThreadPool(10, queueSize, make(chan error))
+	tp := NewThreadPool[error](10, queueSize, true)
 
 	var errors []error
 	go func() {

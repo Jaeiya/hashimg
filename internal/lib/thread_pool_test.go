@@ -13,7 +13,7 @@ func TestThreadPool(t *testing.T) {
 		t.Parallel()
 		a := assert.New(t)
 		a.PanicsWithValue("queue size should be at least 10", func() {
-			NewThreadPool(2, 5, make(chan int))
+			NewThreadPool[int](2, 5, true)
 		})
 	})
 
@@ -21,14 +21,14 @@ func TestThreadPool(t *testing.T) {
 		t.Parallel()
 		a := assert.New(t)
 		a.PanicsWithValue("thread count must be at least 2", func() {
-			NewThreadPool(1, 10, make(chan int))
+			NewThreadPool[int](1, 10, true)
 		})
 	})
 
 	t.Run("should queue work and send to results channel", func(t *testing.T) {
 		t.Parallel()
 		a := assert.New(t)
-		tp := NewThreadPool(5, 100, make(chan int))
+		tp := NewThreadPool[int](5, 100, true)
 
 		workCount := 5000
 

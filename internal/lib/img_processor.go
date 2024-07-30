@@ -5,8 +5,7 @@ import (
 	"os"
 	"path"
 	"strings"
-
-	"github.com/jaeiya/go-template/internal"
+	"sync"
 )
 
 var validImgExtensions = map[string]bool{
@@ -86,27 +85,24 @@ func updateImages(fr FilteredImages) (ProcessStats, error) {
 		}
 	}
 
-	tp := NewThreadPool[error](10, queueSize, true)
+	tp := NewThreadPool[error](10, queueSize, false)
 
-	var errors []error
-	go func() {
-		for err := range tp.ResultChan {
-			errors = append(errors, err)
-		}
-	}()
+	errors := []error{}
+	mux := sync.Mutex{}
 
 	for _, imgPath := range fr.dupeImageHashes {
-		tp.Queue(func() error {
+		tp.QueueNoReturn(func() {
 			err := os.Remove(imgPath)
 			if err != nil {
-				return err
+				mux.Lock()
+				errors = append(errors, err)
+				mux.Unlock()
 			}
-			return nil
 		})
 	}
 
 	for newImgHash, imgPath := range fr.newImageHashes {
-		tp.Queue(func() error {
+		tp.QueueNoReturn(func() {
 			dir := path.Dir(imgPath)
 			// Extensions should always be lowercase even though the
 			// file system doesn't care
@@ -114,17 +110,17 @@ func updateImages(fr FilteredImages) (ProcessStats, error) {
 			newFileName := path.Join(dir, hashPrefix+newImgHash+ext)
 			err := os.Rename(imgPath, newFileName)
 			if err != nil {
-				return err
+				mux.Lock()
+				errors = append(errors, err)
+				mux.Unlock()
 			}
-			return nil
 		})
 	}
 
 	tp.Wait()
 
-	fErrors := internal.FilterNils(errors)
-	if len(fErrors) > 0 {
-		return ProcessStats{}, fmt.Errorf("update errors: %v", fErrors)
+	if len(errors) > 0 {
+		return ProcessStats{}, fmt.Errorf("update errors: %v", errors)
 	}
 
 	return ProcessStats{

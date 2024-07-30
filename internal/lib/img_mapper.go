@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"fmt"
 	"os"
 	fPath "path/filepath"
 	"strings"
@@ -39,6 +40,10 @@ func MapImages(dir string) (ImageMap, error) {
 		return nil, err
 	}
 
+	if len(dirEntries) == 0 {
+		return nil, fmt.Errorf("empty directory: %s", dir)
+	}
+
 	iMap := ImageMap{}
 	for _, entry := range dirEntries {
 		imgExt := strings.ToLower(fPath.Ext(entry.Name()))
@@ -51,6 +56,10 @@ func MapImages(dir string) (ImageMap, error) {
 		} else {
 			iMap[entry.Name()] = NotCached
 		}
+	}
+
+	if len(iMap) == 0 {
+		return nil, fmt.Errorf("no images found in: %s", dir)
 	}
 
 	return iMap, nil

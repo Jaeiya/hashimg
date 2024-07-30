@@ -6,24 +6,32 @@ import (
 	"strings"
 )
 
-var imageExtensions = map[string]bool{
-	".jpg":  true,
-	".jpeg": true,
-	".png":  true,
-	".gif":  true,
-	".bmp":  true,
-	".webp": true,
-	".heic": true,
-}
-
-type CacheStatus bool
+type (
+	CacheStatus  bool
+	ImgExtStatus bool
+)
 
 type ImageMap map[string]CacheStatus
+
+type ImageExtMap map[string]ImgExtStatus
 
 const (
 	NotCached CacheStatus = false
 	Cached    CacheStatus = true
+
+	ExtEnabled  ImgExtStatus = true
+	ExtDisabled ImgExtStatus = false
 )
+
+var imageExtensions = ImageExtMap{
+	".jpg":  ExtEnabled,
+	".jpeg": ExtEnabled,
+	".png":  ExtEnabled,
+	".gif":  ExtEnabled,
+	".bmp":  ExtEnabled,
+	".webp": ExtEnabled,
+	".heic": ExtEnabled,
+}
 
 func GetImageData(dir string) (ImageMap, error) {
 	dirEntries, err := os.ReadDir(dir)
@@ -33,7 +41,8 @@ func GetImageData(dir string) (ImageMap, error) {
 
 	iMap := ImageMap{}
 	for _, entry := range dirEntries {
-		if entry.IsDir() || !imageExtensions[strings.ToLower(fPath.Ext(entry.Name()))] {
+		imgExt := strings.ToLower(fPath.Ext(entry.Name()))
+		if entry.IsDir() || imageExtensions[imgExt] == ExtDisabled {
 			continue
 		}
 

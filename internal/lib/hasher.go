@@ -22,11 +22,18 @@ type HashInfo struct {
 	err error
 }
 
-func NewHasher(length int, threads int, hi *[]HashInfo) *Hasher {
+type HasherConfig struct {
+	Length    int
+	Threads   int
+	QueueSize int
+	HashInfo  *[]HashInfo
+}
+
+func NewHasher(c HasherConfig) *Hasher {
 	return &Hasher{
-		tp:       NewThreadPool[HashInfo](threads, 100, false),
-		hashLen:  length,
-		hashInfo: hi,
+		tp:       NewThreadPool[HashInfo](c.Threads, c.QueueSize, false),
+		hashLen:  c.Length,
+		hashInfo: c.HashInfo,
 	}
 }
 

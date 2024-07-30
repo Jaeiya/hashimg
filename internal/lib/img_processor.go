@@ -40,7 +40,12 @@ func ProcessImages(dir string) (ProcessStats, error) {
 	}
 
 	hi := []HashInfo{}
-	hasher := NewHasher(24, 10, &hi)
+	hasher := NewHasher(HasherConfig{
+		Length:    24,
+		Threads:   10,
+		QueueSize: queueSize,
+		HashInfo:  &hi,
+	})
 
 	for _, fn := range fileNames {
 		hasher.Hash(fn, fp.Join(dir, fn))

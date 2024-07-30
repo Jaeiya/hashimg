@@ -76,13 +76,9 @@ func updateImages(fr FilteredImages) (ProcessStats, error) {
 	}
 
 	workLen := len(fr.dupeImageHashes) + len(fr.newImageHashes)
-	queueSize := 100
-	if workLen < 100 {
-		if workLen < 10 {
-			queueSize = 10
-		} else {
-			queueSize = workLen
-		}
+	queueSize := workLen
+	if queueSize < 10 {
+		queueSize = 10
 	}
 
 	tp := NewThreadPool[error](10, queueSize, false)

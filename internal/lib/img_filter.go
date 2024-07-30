@@ -9,13 +9,13 @@ type FilteredImages struct {
 	dupeImageHashes []string
 }
 
-func NewImageFilter() *ImageFilter {
-	return &ImageFilter{}
+func NewImageFilter() ImageFilter {
+	return ImageFilter{}
 }
 
 type ImageFilter struct{}
 
-func (imgf *ImageFilter) FilterImages(hashInfo []HashInfo, fr *FilteredImages) {
+func (ImageFilter) FilterImages(hashInfo []HashInfo, fr *FilteredImages) {
 	oldImageHashes := map[string]string{}
 	newImageHashes := map[string]string{}
 	dupeImageHashes := []string{}

@@ -2,7 +2,6 @@ package lib
 
 import (
 	"fmt"
-	"sync"
 )
 
 type FilteredImages struct {
@@ -14,9 +13,7 @@ func NewImageFilter() *ImageFilter {
 	return &ImageFilter{}
 }
 
-type ImageFilter struct {
-	wg sync.WaitGroup
-}
+type ImageFilter struct{}
 
 func (imgf *ImageFilter) FilterImages(hashInfo []HashInfo, fr *FilteredImages) {
 	oldImageHashes := map[string]string{}
@@ -52,8 +49,4 @@ func (imgf *ImageFilter) FilterImages(hashInfo []HashInfo, fr *FilteredImages) {
 
 	fr.newImageHashes = newImageHashes
 	fr.dupeImageHashes = dupeImageHashes
-}
-
-func (imgf *ImageFilter) Wait() {
-	imgf.wg.Wait()
 }

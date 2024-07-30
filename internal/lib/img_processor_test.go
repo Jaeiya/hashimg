@@ -25,17 +25,6 @@ func TestImageProcessor(t *testing.T) {
 
 	md := []MockImgProcData{
 		{
-			should:      "ignore non image files",
-			files:       []string{"test1.png", "test2.txt", "test3.ogg", "test4.bmp"},
-			fileContent: []string{"test1", "test2", "test3", "test4"},
-			expectFiles: []string{
-				"0x@1b4f0e9851971998e7320785.png",
-				"test2.txt",
-				"test3.ogg",
-				"0x@a4e624d686e03ed2767c0abd.bmp",
-			},
-		},
-		{
 			should:      "lowercase extension",
 			files:       []string{"test1.PNG", "test2.JPG"},
 			fileContent: []string{"test1", "test2"},

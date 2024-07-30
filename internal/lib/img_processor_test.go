@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type MockData struct {
+type MockImgProcData struct {
 	should      string
 	files       []string
 	fileContent []string
@@ -15,22 +15,15 @@ type MockData struct {
 }
 
 func TestImageProcessor(t *testing.T) {
-	t.Run("should error with invalid directory", func(t *testing.T) {
-		t.Parallel()
-		a := assert.New(t)
-		_, err := ProcessImages("invalid_dir")
-		a.ErrorContains(err, "open invalid_dir: The system cannot find the file specified.")
-	})
-
 	t.Run("should error with no images", func(t *testing.T) {
 		t.Parallel()
 		a := assert.New(t)
 		wd, _ := os.Getwd()
-		_, err := ProcessImages(wd)
+		_, err := ProcessImages(wd, ImageMap{})
 		a.ErrorContains(err, "no images found in")
 	})
 
-	md := []MockData{
+	md := []MockImgProcData{
 		{
 			should:      "ignore non image files",
 			files:       []string{"test1.png", "test2.txt", "test3.ogg", "test4.bmp"},
@@ -169,7 +162,9 @@ func TestImageProcessor(t *testing.T) {
 				len(fileNames),
 				"should always have the same number of files as file content",
 			)
-			_, err = (ProcessImages(dir))
+			iMap, err := MapImages(dir)
+			a.NoError(err)
+			_, err = (ProcessImages(dir, iMap))
 			a.NoError(err)
 
 			fileNames, err = readDir(dir)

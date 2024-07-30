@@ -44,7 +44,7 @@ type Hasher struct {
 	hashInfo *[]HashInfo
 }
 
-func (h *Hasher) Hash(fileName string, filePath string) {
+func (h *Hasher) Hash(fileName string, cs CacheStatus, filePath string) {
 	h.tp.QueueNoReturn(func() {
 		hi := HashInfo{}
 
@@ -54,7 +54,7 @@ func (h *Hasher) Hash(fileName string, filePath string) {
 			h.mux.Unlock()
 		}()
 
-		if strings.Contains(fileName, hashPrefix) {
+		if cs == Cached {
 			ext := fp.Ext(fileName)
 			hi = HashInfo{
 				hash:   strings.TrimPrefix(fileName[0:len(fileName)-len(ext)], hashPrefix),

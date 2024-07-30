@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
+	fp "path/filepath"
 	"strings"
 	"sync"
 )
@@ -48,7 +48,7 @@ func (h *Hasher) Hash(fileName string, filePath string) {
 		}()
 
 		if strings.Contains(fileName, hashPrefix) {
-			ext := path.Ext(fileName)
+			ext := fp.Ext(fileName)
 			hi = HashInfo{
 				hash:   strings.TrimPrefix(fileName[0:len(fileName)-len(ext)], hashPrefix),
 				path:   filePath,

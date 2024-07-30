@@ -3,7 +3,7 @@ package lib
 import (
 	"fmt"
 	"os"
-	"path"
+	fp "path/filepath"
 	"strings"
 	"sync"
 )
@@ -43,7 +43,7 @@ func ProcessImages(dir string) (ProcessStats, error) {
 	hasher := NewHasher(24, 10, &hi)
 
 	for _, fn := range fileNames {
-		hasher.Hash(fn, path.Join(dir, fn))
+		hasher.Hash(fn, fp.Join(dir, fn))
 	}
 
 	hasher.Wait()
@@ -61,7 +61,7 @@ func getImgFileNames(dir string) ([]string, error) {
 
 	fileNames := []string{}
 	for _, entry := range dirEntries {
-		if entry.IsDir() || !validImgExtensions[strings.ToLower(path.Ext(entry.Name()))] {
+		if entry.IsDir() || !validImgExtensions[strings.ToLower(fp.Ext(entry.Name()))] {
 			continue
 		}
 		fileNames = append(fileNames, entry.Name())
@@ -103,11 +103,11 @@ func updateImages(fr FilteredImages) (ProcessStats, error) {
 
 	for newImgHash, imgPath := range fr.newImageHashes {
 		tp.QueueNoReturn(func() {
-			dir := path.Dir(imgPath)
+			dir := fp.Dir(imgPath)
 			// Extensions should always be lowercase even though the
 			// file system doesn't care
-			ext := strings.ToLower(path.Ext(imgPath))
-			newFileName := path.Join(dir, hashPrefix+newImgHash+ext)
+			ext := strings.ToLower(fp.Ext(imgPath))
+			newFileName := fp.Join(dir, hashPrefix+newImgHash+ext)
 			err := os.Rename(imgPath, newFileName)
 			if err != nil {
 				mux.Lock()

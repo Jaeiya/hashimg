@@ -65,12 +65,16 @@ func main() {
 	}
 
 	fmt.Println("\nProcessing: ", wd)
-	stats, err := lib.ProcessImages(wd)
+	iMap, err := lib.MapImages(wd)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("\nLoaded:", len(iMap), "images")
+	stats, err := lib.ProcessImages(wd, iMap)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println(" Total:", stats.Total)
 	fmt.Println("Cached:", stats.New)
 	fmt.Println(" Dupes:", stats.Dup)
 }

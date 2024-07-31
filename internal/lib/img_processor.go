@@ -17,7 +17,7 @@ type ProcessStats struct {
 func ProcessImages(dir string, hashLen int, iMap ImageMap) (ProcessStats, error) {
 	mapLen := len(iMap)
 	if mapLen == 0 {
-		return ProcessStats{}, fmt.Errorf("no images found in %s", dir)
+		return ProcessStats{}, fmt.Errorf("empty image map")
 	}
 
 	queueSize := mapLen

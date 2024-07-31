@@ -15,12 +15,12 @@ type MockImgProcData struct {
 }
 
 func TestImageProcessor(t *testing.T) {
-	t.Run("should error with no images", func(t *testing.T) {
+	t.Run("should error with an empty image map", func(t *testing.T) {
 		t.Parallel()
 		a := assert.New(t)
 		wd, _ := os.Getwd()
 		_, err := ProcessImages(wd, 32, ImageMap{})
-		a.ErrorContains(err, "no images found in")
+		a.ErrorContains(err, "empty image map")
 	})
 
 	md := []MockImgProcData{

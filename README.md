@@ -16,8 +16,8 @@ finding false positives; it's good enough for my use case and probably most peop
 
 I work on this as I'm inspired to do so. I would not expect any regular updates but I do plan to add a
 better UI using the following frameworks:
-[Lip Gloss]:https://github.com/charmbracelet/lipgloss
-[Bubble Tea]:https://github.com/charmbracelet/bubbletea.
+
+[Lip Gloss](https://github.com/charmbracelet/lipgloss) & [Bubble Tea](https://github.com/charmbracelet/bubbletea)
 
 ### Issues
 

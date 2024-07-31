@@ -14,7 +14,7 @@ type ProcessStats struct {
 	Dup   int
 }
 
-func ProcessImages(dir string, iMap ImageMap) (ProcessStats, error) {
+func ProcessImages(dir string, hashLen int, iMap ImageMap) (ProcessStats, error) {
 	mapLen := len(iMap)
 	if mapLen == 0 {
 		return ProcessStats{}, fmt.Errorf("no images found in %s", dir)
@@ -27,7 +27,7 @@ func ProcessImages(dir string, iMap ImageMap) (ProcessStats, error) {
 
 	hi := []HashInfo{}
 	hasher := NewHasher(HasherConfig{
-		Length:    24,
+		Length:    hashLen,
 		Threads:   10,
 		QueueSize: queueSize,
 		HashInfo:  &hi,

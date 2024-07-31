@@ -70,7 +70,7 @@ func main() {
 		panic(err)
 	}
 	fmt.Println("\nLoaded:", len(iMap), "images")
-	stats, err := lib.ProcessImages(wd, iMap)
+	stats, err := lib.ProcessImages(wd, 24, iMap)
 	if err != nil {
 		panic(err)
 	}

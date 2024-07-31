@@ -44,12 +44,12 @@ func ProcessImages(dir string, hashLen int, iMap ImageMap) (ProcessStats, error)
 	return updateImages(*fi)
 }
 
-func updateImages(fr FilteredImages) (ProcessStats, error) {
-	if len(fr.dupeImageHashes) == 0 && len(fr.newImageHashes) == 0 {
+func updateImages(fi FilteredImages) (ProcessStats, error) {
+	if len(fi.dupeImageHashes) == 0 && len(fi.newImageHashes) == 0 {
 		return ProcessStats{}, nil
 	}
 
-	workLen := len(fr.dupeImageHashes) + len(fr.newImageHashes)
+	workLen := len(fi.dupeImageHashes) + len(fi.newImageHashes)
 	queueSize := workLen
 	if queueSize < 10 {
 		queueSize = 10
@@ -60,7 +60,7 @@ func updateImages(fr FilteredImages) (ProcessStats, error) {
 	errors := []error{}
 	mux := sync.Mutex{}
 
-	for _, imgPath := range fr.dupeImageHashes {
+	for _, imgPath := range fi.dupeImageHashes {
 		tp.QueueNoReturn(func() {
 			err := os.Remove(imgPath)
 			if err != nil {
@@ -71,7 +71,7 @@ func updateImages(fr FilteredImages) (ProcessStats, error) {
 		})
 	}
 
-	for newImgHash, imgPath := range fr.newImageHashes {
+	for newImgHash, imgPath := range fi.newImageHashes {
 		tp.QueueNoReturn(func() {
 			dir := fPath.Dir(imgPath)
 			// Uppercase extensions are ugly and inconsistent
@@ -94,7 +94,7 @@ func updateImages(fr FilteredImages) (ProcessStats, error) {
 
 	return ProcessStats{
 		Total: workLen,
-		New:   len(fr.newImageHashes),
-		Dup:   len(fr.dupeImageHashes),
+		New:   len(fi.newImageHashes),
+		Dup:   len(fi.dupeImageHashes),
 	}, nil
 }

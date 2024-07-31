@@ -19,7 +19,7 @@ func TestImageProcessor(t *testing.T) {
 		t.Parallel()
 		a := assert.New(t)
 		wd, _ := os.Getwd()
-		_, err := ProcessImages(wd, ImageMap{})
+		_, err := ProcessImages(wd, 32, ImageMap{})
 		a.ErrorContains(err, "no images found in")
 	})
 
@@ -153,7 +153,7 @@ func TestImageProcessor(t *testing.T) {
 			)
 			iMap, err := MapImages(dir)
 			a.NoError(err)
-			_, err = (ProcessImages(dir, iMap))
+			_, err = (ProcessImages(dir, 32, iMap))
 			a.NoError(err)
 
 			fileNames, err = readDir(dir)

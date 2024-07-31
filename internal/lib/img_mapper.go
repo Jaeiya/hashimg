@@ -46,6 +46,7 @@ func MapImages(dir string) (ImageMap, error) {
 
 	iMap := ImageMap{}
 	for _, entry := range dirEntries {
+		// Some extensions might be uppercase
 		imgExt := strings.ToLower(fPath.Ext(entry.Name()))
 		if entry.IsDir() || imageExtensions[imgExt] == ExtDisabled {
 			continue

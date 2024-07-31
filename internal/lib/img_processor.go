@@ -74,8 +74,7 @@ func updateImages(fr FilteredImages) (ProcessStats, error) {
 	for newImgHash, imgPath := range fr.newImageHashes {
 		tp.QueueNoReturn(func() {
 			dir := fPath.Dir(imgPath)
-			// Extensions should always be lowercase even though the
-			// file system doesn't care
+			// Uppercase extensions are ugly and inconsistent
 			ext := strings.ToLower(fPath.Ext(imgPath))
 			newFileName := fPath.Join(dir, hashPrefix+newImgHash+ext)
 			err := os.Rename(imgPath, newFileName)

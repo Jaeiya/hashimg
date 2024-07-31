@@ -46,16 +46,17 @@ func MapImages(dir string) (ImageMap, error) {
 
 	iMap := ImageMap{}
 	for _, entry := range dirEntries {
+		fileName := entry.Name()
 		// Some extensions might be uppercase
-		imgExt := strings.ToLower(fPath.Ext(entry.Name()))
+		imgExt := strings.ToLower(fPath.Ext(fileName))
 		if entry.IsDir() || imageExtensions[imgExt] == ExtDisabled {
 			continue
 		}
 
-		if strings.HasPrefix(entry.Name(), hashPrefix) {
-			iMap[entry.Name()] = Cached
+		if strings.HasPrefix(fileName, hashPrefix) {
+			iMap[fileName] = Cached
 		} else {
-			iMap[entry.Name()] = NotCached
+			iMap[fileName] = NotCached
 		}
 	}
 

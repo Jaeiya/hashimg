@@ -31,7 +31,7 @@ type HasherConfig struct {
 
 func NewHasher(c HasherConfig) *Hasher {
 	return &Hasher{
-		tp:       NewThreadPool[HashInfo](c.Threads, c.QueueSize, false),
+		tp:       NewThreadPool(c.Threads, c.QueueSize, false),
 		hashLen:  c.Length,
 		hashInfo: c.HashInfo,
 	}
@@ -39,13 +39,13 @@ func NewHasher(c HasherConfig) *Hasher {
 
 type Hasher struct {
 	mux      sync.Mutex
-	tp       *ThreadPool[HashInfo]
+	tp       *ThreadPool
 	hashLen  int
 	hashInfo *[]HashInfo
 }
 
 func (h *Hasher) Hash(fileName string, cs CacheStatus, filePath string) {
-	h.tp.QueueNoReturn(func() {
+	h.tp.Queue(func() {
 		hi := HashInfo{}
 
 		defer func() {

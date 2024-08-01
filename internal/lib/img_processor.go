@@ -55,13 +55,13 @@ func updateImages(fi FilteredImages) (ProcessStats, error) {
 		queueSize = 10
 	}
 
-	tp := NewThreadPool[error](10, queueSize, false)
+	tp := NewThreadPool(10, queueSize, false)
 
 	errors := []error{}
 	mux := sync.Mutex{}
 
 	for _, imgPath := range fi.dupeImageHashes {
-		tp.QueueNoReturn(func() {
+		tp.Queue(func() {
 			err := os.Remove(imgPath)
 			if err != nil {
 				mux.Lock()
@@ -72,7 +72,7 @@ func updateImages(fi FilteredImages) (ProcessStats, error) {
 	}
 
 	for newImgHash, imgPath := range fi.newImageHashes {
-		tp.QueueNoReturn(func() {
+		tp.Queue(func() {
 			dir := fPath.Dir(imgPath)
 			// Uppercase extensions are ugly and inconsistent
 			ext := strings.ToLower(fPath.Ext(imgPath))

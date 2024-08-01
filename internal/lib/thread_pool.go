@@ -4,14 +4,13 @@ import (
 	"sync"
 )
 
-type ThreadPool[T any] struct {
+type ThreadPool struct {
 	wg         sync.WaitGroup
-	queue      chan func() T
-	ResultChan chan T
+	queue      chan func()
 	sendResult bool
 }
 
-func NewThreadPool[T any](threadCount int, queueSize int, isUsingResult bool) *ThreadPool[T] {
+func NewThreadPool(threadCount int, queueSize int, isUsingResult bool) *ThreadPool {
 	if queueSize < 10 {
 		panic("queue size should be at least 10")
 	}
@@ -20,9 +19,8 @@ func NewThreadPool[T any](threadCount int, queueSize int, isUsingResult bool) *T
 		panic("thread count must be at least 2")
 	}
 
-	tp := &ThreadPool[T]{
-		queue:      make(chan func() T, queueSize),
-		ResultChan: make(chan T, queueSize),
+	tp := &ThreadPool{
+		queue: make(chan func(), queueSize),
 	}
 	tp.wg.Add(threadCount)
 
@@ -35,32 +33,18 @@ func NewThreadPool[T any](threadCount int, queueSize int, isUsingResult bool) *T
 	return tp
 }
 
-func (tp *ThreadPool[T]) Queue(work func() T) {
+func (tp *ThreadPool) Queue(work func()) {
 	tp.queue <- work
 }
 
-func (tp *ThreadPool[T]) QueueNoReturn(work func()) {
-	tp.queue <- func() T {
-		work()
-		var zero T
-		return zero
-	}
-}
-
-func (tp *ThreadPool[T]) Wait() {
+func (tp *ThreadPool) Wait() {
 	close(tp.queue) // Prevents hanging forever
 	tp.wg.Wait()
-	if tp.sendResult {
-		close(tp.ResultChan)
-	}
 }
 
-func (tp *ThreadPool[T]) threadWorker() {
+func (tp *ThreadPool) threadWorker() {
 	defer tp.wg.Done()
 	for work := range tp.queue {
-		if tp.sendResult {
-			tp.ResultChan <- work()
-		}
 		work()
 	}
 }

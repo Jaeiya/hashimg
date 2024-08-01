@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 )
 
 type ProcessStats struct {
@@ -28,6 +29,7 @@ func (ip ImageProcessor) ProcessImages(
 	hashLen int,
 	iMap ImageMap,
 ) (ProcessStats, error) {
+	start := time.Now()
 	mapLen := len(iMap)
 	if mapLen == 0 {
 		return ProcessStats{}, fmt.Errorf("empty image map")
@@ -56,6 +58,7 @@ func (ip ImageProcessor) ProcessImages(
 	}
 
 	hasher.Wait()
+	fmt.Println("HashSpeed:", time.Since(start))
 	fi := &FilteredImages{}
 	imgFilter := NewImageFilter()
 	imgFilter.FilterImages(hi, fi)
@@ -63,6 +66,7 @@ func (ip ImageProcessor) ProcessImages(
 }
 
 func (ip ImageProcessor) updateImages(fi FilteredImages) (ProcessStats, error) {
+	start := time.Now()
 	if len(fi.dupeImageHashes) == 0 && len(fi.newImageHashes) == 0 {
 		return ProcessStats{}, nil
 	}
@@ -105,7 +109,7 @@ func (ip ImageProcessor) updateImages(fi FilteredImages) (ProcessStats, error) {
 	}
 
 	tp.Wait()
-
+	fmt.Println("UpdateSpeed:", time.Since(start))
 	if len(errors) > 0 {
 		return ProcessStats{}, fmt.Errorf("update errors: %v", errors)
 	}

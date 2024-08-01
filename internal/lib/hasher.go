@@ -17,31 +17,31 @@ var (
 )
 
 type HashInfo struct {
-	hash string
-	// Path to the file
-	path string
-	// If image has already been hashed and prefixed
+	hash   string
+	path   string
 	cached bool
-	// If an error occurs during processing
-	err error
+	err    error
 }
 
 type HasherConfig struct {
-	Length    int
-	Threads   int
+	// The smaller this is, the higher chance of collisions
+	Length int
+	// How many goroutines should be in pool
+	Threads int
+	// Queue channel minimum size
 	QueueSize int
-	HashInfo  *[]HashInfo
-	Prefix    string
+	// Container for hash results
+	HashInfo *[]HashInfo
+	// Should be a unique string
+	Prefix string
 }
 
 type Hasher struct {
 	mux        sync.Mutex
 	threadPool *ThreadPool
-	// The smaller this is, the higher chance of collisions
-	hashLen  int
-	hashInfo *[]HashInfo
-	// Should be a unique string
-	prefix string
+	hashLen    int
+	hashInfo   *[]HashInfo
+	prefix     string
 }
 
 /*

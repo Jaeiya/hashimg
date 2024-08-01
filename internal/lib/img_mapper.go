@@ -34,7 +34,7 @@ var imageExtensions = ImageExtMap{
 	".heic": ExtEnabled,
 }
 
-func MapImages(dir string) (ImageMap, error) {
+func MapImages(dir, hashPrefix string) (ImageMap, error) {
 	dirEntries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err

@@ -65,12 +65,14 @@ func main() {
 	}
 
 	fmt.Println("\nProcessing: ", wd)
-	iMap, err := lib.MapImages(wd)
+	const hashPrefix = "0x@"
+	iMap, err := lib.MapImages(wd, hashPrefix)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println("\nLoaded:", len(iMap), "images")
-	stats, err := lib.ProcessImages(wd, 32, iMap)
+	imgProcessor := lib.NewImageProcessor(hashPrefix)
+	stats, err := imgProcessor.ProcessImages(wd, 32, iMap)
 	if err != nil {
 		panic(err)
 	}

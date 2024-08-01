@@ -14,7 +14,19 @@ type ProcessStats struct {
 	Dup   int
 }
 
-func ProcessImages(dir string, hashLen int, iMap ImageMap) (ProcessStats, error) {
+type ImageProcessor struct {
+	hashPrefix string
+}
+
+func NewImageProcessor(hashPrefix string) ImageProcessor {
+	return ImageProcessor{hashPrefix}
+}
+
+func (ip ImageProcessor) ProcessImages(
+	dir string,
+	hashLen int,
+	iMap ImageMap,
+) (ProcessStats, error) {
 	mapLen := len(iMap)
 	if mapLen == 0 {
 		return ProcessStats{}, fmt.Errorf("empty image map")
@@ -32,6 +44,7 @@ func ProcessImages(dir string, hashLen int, iMap ImageMap) (ProcessStats, error)
 		Threads:   10,
 		QueueSize: queueSize,
 		HashInfo:  &hi,
+		Prefix:    ip.hashPrefix,
 	})
 	if err != nil {
 		return ProcessStats{}, err
@@ -45,10 +58,10 @@ func ProcessImages(dir string, hashLen int, iMap ImageMap) (ProcessStats, error)
 	fi := &FilteredImages{}
 	imgFilter := NewImageFilter()
 	imgFilter.FilterImages(hi, fi)
-	return updateImages(*fi)
+	return ip.updateImages(*fi)
 }
 
-func updateImages(fi FilteredImages) (ProcessStats, error) {
+func (ip ImageProcessor) updateImages(fi FilteredImages) (ProcessStats, error) {
 	if len(fi.dupeImageHashes) == 0 && len(fi.newImageHashes) == 0 {
 		return ProcessStats{}, nil
 	}
@@ -80,7 +93,7 @@ func updateImages(fi FilteredImages) (ProcessStats, error) {
 			dir := fPath.Dir(imgPath)
 			// Uppercase extensions are ugly and inconsistent
 			ext := strings.ToLower(fPath.Ext(imgPath))
-			newFileName := fPath.Join(dir, hashPrefix+newImgHash+ext)
+			newFileName := fPath.Join(dir, ip.hashPrefix+newImgHash+ext)
 			err := os.Rename(imgPath, newFileName)
 			if err != nil {
 				mux.Lock()

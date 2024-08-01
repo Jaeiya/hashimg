@@ -15,10 +15,11 @@ type MockMapperTest struct {
 }
 
 func TestImageMapper(t *testing.T) {
+	const hashPrefix = "0x@"
 	t.Run("should error if directory not found", func(t *testing.T) {
 		t.Parallel()
 		a := assert.New(t)
-		_, err := MapImages("")
+		_, err := MapImages("", hashPrefix)
 		a.ErrorContains(err, "system cannot find the file")
 	})
 
@@ -26,7 +27,7 @@ func TestImageMapper(t *testing.T) {
 		t.Parallel()
 		a := assert.New(t)
 		dir := t.TempDir()
-		_, err := MapImages(filepath.Join(dir))
+		_, err := MapImages(filepath.Join(dir), hashPrefix)
 		a.ErrorContains(err, "empty directory: ")
 	})
 
@@ -36,7 +37,7 @@ func TestImageMapper(t *testing.T) {
 		dir := t.TempDir()
 		err := writeFiles(dir, []string{"test1.txt", "test2.mp3"}, []string{"test1", "test2"})
 		a.NoError(err)
-		_, err = MapImages(filepath.Join(dir))
+		_, err = MapImages(filepath.Join(dir), hashPrefix)
 		a.ErrorContains(err, "no images found in: ")
 	})
 
@@ -90,7 +91,7 @@ func TestImageMapper(t *testing.T) {
 			dir := t.TempDir()
 			err := writeFiles(dir, test.files, test.fileContent)
 			a.NoError(err)
-			iMap, err := MapImages(dir)
+			iMap, err := MapImages(dir, hashPrefix)
 			a.NoError(err)
 			a.Equal(test.expectMap, iMap, "expected mapped results should match actual")
 		})

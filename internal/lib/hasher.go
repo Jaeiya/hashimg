@@ -10,7 +10,6 @@ import (
 	"sync"
 )
 
-const hashPrefix = "0x@"
 
 type HashInfo struct {
 	hash string
@@ -27,23 +26,35 @@ type HasherConfig struct {
 	Threads   int
 	QueueSize int
 	HashInfo  *[]HashInfo
+	Prefix    string
 }
 
 type Hasher struct {
 	mux        sync.Mutex
 	threadPool *ThreadPool
-	hashLen    int
-	hashInfo   *[]HashInfo
+	// The smaller this is, the higher chance of collisions
+	hashLen  int
+	hashInfo *[]HashInfo
+	// Should be a unique string
+	prefix string
 }
 
+/*
+NewHasher creates a Hasher which takes a HasherConfig.
+
+🟡 The HashConfig.Prefix should be a unique string, because it identifies
+which images have been renamed.
+*/
 func NewHasher(c HasherConfig) (*Hasher, error) {
 	if c.HashInfo == nil {
 		return nil, fmt.Errorf("hash info is nil; it must be initialized")
 	}
+
 	return &Hasher{
 		threadPool: NewThreadPool(c.Threads, c.QueueSize, false),
 		hashLen:    c.Length,
 		hashInfo:   c.HashInfo,
+		prefix:     c.Prefix,
 	}, nil
 }
 
@@ -53,7 +64,7 @@ func (h *Hasher) Hash(fileName string, cs CacheStatus, filePath string) {
 
 		if cs == Cached {
 			ext := fPath.Ext(fileName)
-			hi.hash = strings.TrimPrefix(fileName[0:len(fileName)-len(ext)], hashPrefix)
+			hi.hash = strings.TrimPrefix(fileName[0:len(fileName)-len(ext)], h.prefix)
 			hi.cached = true
 			hi.err = nil
 		} else {

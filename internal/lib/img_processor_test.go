@@ -15,11 +15,14 @@ type MockImgProcData struct {
 }
 
 func TestImageProcessor(t *testing.T) {
+	const hashPrefix = "0x@"
+
 	t.Run("should error with an empty image map", func(t *testing.T) {
 		t.Parallel()
 		a := assert.New(t)
 		wd, _ := os.Getwd()
-		_, err := ProcessImages(wd, 32, ImageMap{})
+		imgProcessor := NewImageProcessor(hashPrefix)
+		_, err := imgProcessor.ProcessImages(wd, 32, ImageMap{})
 		a.ErrorContains(err, "empty image map")
 	})
 
@@ -151,9 +154,10 @@ func TestImageProcessor(t *testing.T) {
 				len(fileNames),
 				"should always have the same number of files as file content",
 			)
-			iMap, err := MapImages(dir)
+			iMap, err := MapImages(dir, hashPrefix)
 			a.NoError(err)
-			_, err = (ProcessImages(dir, 32, iMap))
+			imgProcessor := NewImageProcessor(hashPrefix)
+			_, err = imgProcessor.ProcessImages(dir, 32, iMap)
 			a.NoError(err)
 
 			fileNames, err = readDir(dir)

@@ -2,6 +2,7 @@ package lib
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -10,6 +11,10 @@ import (
 	"sync"
 )
 
+var (
+	ErrHashPrefixTooShort = errors.New("hash prefix must be at least 3 characters")
+	ErrHashInfoNil        = errors.New("hash info is nil; it must be initialized")
+)
 
 type HashInfo struct {
 	hash string
@@ -46,8 +51,12 @@ NewHasher creates a Hasher which takes a HasherConfig.
 which images have been renamed.
 */
 func NewHasher(c HasherConfig) (*Hasher, error) {
+	if len(c.Prefix) < 3 {
+		return nil, ErrHashPrefixTooShort
+	}
+
 	if c.HashInfo == nil {
-		return nil, fmt.Errorf("hash info is nil; it must be initialized")
+		return nil, ErrHashInfoNil
 	}
 
 	return &Hasher{

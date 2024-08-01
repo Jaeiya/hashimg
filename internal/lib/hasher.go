@@ -107,7 +107,7 @@ func (h *Hasher) computeHash(fileName string) (string, error) {
 		return "", err
 	}
 	defer file.Close()
-	buf := bufio.NewReaderSize(file, 1024*1024)
+	buf := bufio.NewReader(file)
 
 	sha := sha256.New()
 	if _, err := io.Copy(sha, buf); err != nil {

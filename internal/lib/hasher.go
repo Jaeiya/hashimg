@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"bufio"
 	"crypto/sha256"
 	"errors"
 	"fmt"
@@ -101,9 +102,10 @@ func (h *Hasher) computeHash(fileName string) (string, error) {
 		return "", err
 	}
 	defer file.Close()
+	buf := bufio.NewReaderSize(file, 1024*1024)
 
 	sha := sha256.New()
-	if _, err := io.Copy(sha, file); err != nil {
+	if _, err := io.Copy(sha, buf); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("%x", sha.Sum(nil))[0:h.hashLen], nil

@@ -26,12 +26,16 @@ func ProcessImages(dir string, hashLen int, iMap ImageMap) (ProcessStats, error)
 	}
 
 	hi := []HashInfo{}
-	hasher := NewHasher(HasherConfig{
+
+	hasher, err := NewHasher(HasherConfig{
 		Length:    hashLen,
 		Threads:   10,
 		QueueSize: queueSize,
 		HashInfo:  &hi,
 	})
+	if err != nil {
+		return ProcessStats{}, err
+	}
 
 	for fileName, cacheStatus := range iMap {
 		hasher.Hash(fileName, cacheStatus, fPath.Join(dir, fileName))

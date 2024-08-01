@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	fp "path/filepath"
+	fPath "path/filepath"
 	"strings"
 	"sync"
 )
@@ -29,71 +29,57 @@ type HasherConfig struct {
 	HashInfo  *[]HashInfo
 }
 
-func NewHasher(c HasherConfig) *Hasher {
-	return &Hasher{
-		tp:       NewThreadPool(c.Threads, c.QueueSize, false),
-		hashLen:  c.Length,
-		hashInfo: c.HashInfo,
-	}
+type Hasher struct {
+	mux        sync.Mutex
+	threadPool *ThreadPool
+	hashLen    int
+	hashInfo   *[]HashInfo
 }
 
-type Hasher struct {
-	mux      sync.Mutex
-	tp       *ThreadPool
-	hashLen  int
-	hashInfo *[]HashInfo
+func NewHasher(c HasherConfig) (*Hasher, error) {
+	if c.HashInfo == nil {
+		return nil, fmt.Errorf("hash info is nil; it must be initialized")
+	}
+	return &Hasher{
+		threadPool: NewThreadPool(c.Threads, c.QueueSize, false),
+		hashLen:    c.Length,
+		hashInfo:   c.HashInfo,
+	}, nil
 }
 
 func (h *Hasher) Hash(fileName string, cs CacheStatus, filePath string) {
-	h.tp.Queue(func() {
-		hi := HashInfo{}
-
-		defer func() {
-			h.mux.Lock()
-			*h.hashInfo = append(*h.hashInfo, hi)
-			h.mux.Unlock()
-		}()
+	h.threadPool.Queue(func() {
+		hi := HashInfo{path: filePath}
 
 		if cs == Cached {
-			ext := fp.Ext(fileName)
-			hi = HashInfo{
-				hash:   strings.TrimPrefix(fileName[0:len(fileName)-len(ext)], hashPrefix),
-				path:   filePath,
-				cached: true,
-				err:    nil,
-			}
-			return
+			ext := fPath.Ext(fileName)
+			hi.hash = strings.TrimPrefix(fileName[0:len(fileName)-len(ext)], hashPrefix)
+			hi.cached = true
+			hi.err = nil
+		} else {
+			hi.hash, hi.err = h.computeHash(filePath)
 		}
 
-		file, err := os.Open(filePath)
-		if err != nil {
-			hi = HashInfo{
-				path: filePath,
-				err:  err,
-			}
-			return
-		}
-		defer file.Close()
-
-		sha := sha256.New()
-
-		if _, err := io.Copy(sha, file); err != nil {
-			hi = HashInfo{
-				path: filePath,
-				err:  err,
-			}
-			return
-		}
-
-		hi = HashInfo{
-			hash:   fmt.Sprintf("%x", sha.Sum(nil))[0:h.hashLen],
-			path:   filePath,
-			cached: false,
-			err:    nil,
-		}
+		h.mux.Lock()
+		*h.hashInfo = append(*h.hashInfo, hi)
+		h.mux.Unlock()
 	})
 }
 
 func (h *Hasher) Wait() {
-	h.tp.Wait()
+	h.threadPool.Wait()
+}
+
+func (h *Hasher) computeHash(fileName string) (string, error) {
+	file, err := os.Open(fileName)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	sha := sha256.New()
+	if _, err := io.Copy(sha, file); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%x", sha.Sum(nil))[0:h.hashLen], nil
 }

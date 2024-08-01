@@ -10,12 +10,13 @@ func TestHasher(t *testing.T) {
 	t.Parallel()
 	a := assert.New(t)
 
-	t.Run("should error if hash length is too small", func(t *testing.T) {
+	t.Run("should error if hash prefix is too short", func(t *testing.T) {
 		t.Parallel()
 		_, err := NewHasher(HasherConfig{
-			Length:    1,
-			Threads:   10,
+			Length:    32,
+			Threads:   2,
 			QueueSize: 100,
+			Prefix:    "t",
 		})
 		a.ErrorIs(err, ErrHashPrefixTooShort)
 	})
@@ -24,11 +25,23 @@ func TestHasher(t *testing.T) {
 		t.Parallel()
 		_, err := NewHasher(HasherConfig{
 			Length:    32,
-			Threads:   10,
+			Threads:   2,
 			QueueSize: 100,
 			HashInfo:  nil,
-			Prefix:    "test",
+			Prefix:    "tst",
 		})
 		a.ErrorIs(err, ErrHashInfoNil)
+	})
+
+	t.Run("should error if hash length is too short", func(t *testing.T) {
+		t.Parallel()
+		_, err := NewHasher(HasherConfig{
+			Length:    9,
+			Threads:   2,
+			QueueSize: 100,
+			HashInfo:  &[]HashInfo{},
+			Prefix:    "tst",
+		})
+		a.ErrorIs(err, ErrHashLengthTooShort)
 	})
 }

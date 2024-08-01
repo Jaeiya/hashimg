@@ -14,6 +14,7 @@ import (
 var (
 	ErrHashPrefixTooShort = errors.New("hash prefix must be at least 3 characters")
 	ErrHashInfoNil        = errors.New("hash info is nil; it must be initialized")
+	ErrHashLengthTooShort = errors.New("hash length must be at least 10 characters")
 )
 
 type HashInfo struct {
@@ -57,6 +58,10 @@ func NewHasher(c HasherConfig) (*Hasher, error) {
 
 	if c.HashInfo == nil {
 		return nil, ErrHashInfoNil
+	}
+
+	if c.Length < 10 {
+		return nil, ErrHashLengthTooShort
 	}
 
 	return &Hasher{

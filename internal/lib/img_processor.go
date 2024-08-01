@@ -77,7 +77,10 @@ func (ip ImageProcessor) updateImages(fi FilteredImages) (ProcessStats, error) {
 		queueSize = 10
 	}
 
-	tp := NewThreadPool(runtime.NumCPU(), queueSize, false)
+	tp, err := NewThreadPool(runtime.NumCPU(), queueSize, false)
+	if err != nil {
+		return ProcessStats{}, err
+	}
 
 	errors := []error{}
 	mux := sync.Mutex{}

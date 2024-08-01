@@ -1,7 +1,13 @@
 package lib
 
 import (
+	"errors"
 	"sync"
+)
+
+var (
+	ErrThreadPoolQueueTooSmall = errors.New("queue size should be at least 10")
+	ErrThreadPoolCountTooSmall = errors.New("thread count must be at least 2")
 )
 
 type ThreadPool struct {
@@ -10,13 +16,13 @@ type ThreadPool struct {
 	sendResult bool
 }
 
-func NewThreadPool(threadCount int, queueSize int, isUsingResult bool) *ThreadPool {
+func NewThreadPool(threadCount int, queueSize int, isUsingResult bool) (*ThreadPool, error) {
 	if queueSize < 10 {
-		panic("queue size should be at least 10")
+		return nil, ErrThreadPoolQueueTooSmall
 	}
 
 	if threadCount < 2 {
-		panic("thread count must be at least 2")
+		return nil, ErrThreadPoolCountTooSmall
 	}
 
 	tp := &ThreadPool{
@@ -30,7 +36,7 @@ func NewThreadPool(threadCount int, queueSize int, isUsingResult bool) *ThreadPo
 		go tp.threadWorker()
 	}
 
-	return tp
+	return tp, nil
 }
 
 func (tp *ThreadPool) Queue(work func()) {

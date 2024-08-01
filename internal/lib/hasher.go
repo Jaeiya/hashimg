@@ -65,8 +65,13 @@ func NewHasher(c HasherConfig) (*Hasher, error) {
 		return nil, ErrHashLengthTooShort
 	}
 
+	tp, err := NewThreadPool(c.Threads, c.QueueSize, false)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Hasher{
-		threadPool: NewThreadPool(c.Threads, c.QueueSize, false),
+		threadPool: tp,
 		hashLen:    c.Length,
 		hashInfo:   c.HashInfo,
 		prefix:     c.Prefix,

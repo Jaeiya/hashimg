@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	fPath "path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 )
@@ -41,7 +42,7 @@ func (ip ImageProcessor) ProcessImages(
 
 	hasher, err := NewHasher(HasherConfig{
 		Length:    hashLen,
-		Threads:   10,
+		Threads:   runtime.NumCPU(),
 		QueueSize: queueSize,
 		HashInfo:  &hi,
 		Prefix:    ip.hashPrefix,
@@ -72,7 +73,7 @@ func (ip ImageProcessor) updateImages(fi FilteredImages) (ProcessStats, error) {
 		queueSize = 10
 	}
 
-	tp := NewThreadPool(10, queueSize, false)
+	tp := NewThreadPool(runtime.NumCPU(), queueSize, false)
 
 	errors := []error{}
 	mux := sync.Mutex{}

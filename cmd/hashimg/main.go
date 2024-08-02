@@ -72,7 +72,7 @@ func main() {
 	}
 	fmt.Println("\nLoaded:", len(iMap), "images")
 	imgProcessor := lib.NewImageProcessor(hashPrefix)
-	stats, err := imgProcessor.ProcessImages(wd, 32, iMap)
+	stats, err := imgProcessor.Process(wd, 32, iMap)
 	if err != nil {
 		panic(err)
 	}

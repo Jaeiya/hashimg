@@ -24,11 +24,7 @@ func NewImageProcessor(hashPrefix string) ImageProcessor {
 	return ImageProcessor{hashPrefix}
 }
 
-func (ip ImageProcessor) ProcessImages(
-	dir string,
-	hashLen int,
-	iMap ImageMap,
-) (ProcessStats, error) {
+func (ip ImageProcessor) Process(dir string, hashLen int, iMap ImageMap) (ProcessStats, error) {
 	start := time.Now()
 	mapLen := len(iMap)
 	if mapLen == 0 {

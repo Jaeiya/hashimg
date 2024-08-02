@@ -22,7 +22,7 @@ func TestImageProcessor(t *testing.T) {
 		a := assert.New(t)
 		wd, _ := os.Getwd()
 		imgProcessor := NewImageProcessor(hashPrefix)
-		_, err := imgProcessor.ProcessImages(wd, 32, ImageMap{})
+		_, err := imgProcessor.Process(wd, 32, ImageMap{})
 		a.ErrorContains(err, "empty image map")
 	})
 
@@ -157,7 +157,7 @@ func TestImageProcessor(t *testing.T) {
 			iMap, err := MapImages(dir, hashPrefix)
 			a.NoError(err)
 			imgProcessor := NewImageProcessor(hashPrefix)
-			_, err = imgProcessor.ProcessImages(dir, 32, iMap)
+			_, err = imgProcessor.Process(dir, 32, iMap)
 			a.NoError(err)
 
 			fileNames, err = readDir(dir)

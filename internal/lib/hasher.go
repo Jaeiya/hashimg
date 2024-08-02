@@ -10,6 +10,8 @@ import (
 	fPath "path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/jaeiya/go-template/internal/lib/utils"
 )
 
 var (
@@ -40,7 +42,7 @@ type HasherConfig struct {
 
 type Hasher struct {
 	mux        sync.Mutex
-	threadPool *ThreadPool
+	threadPool *utils.ThreadPool
 	hashLen    int
 	hashInfo   *[]HashInfo
 	prefix     string
@@ -65,7 +67,7 @@ func NewHasher(c HasherConfig) (*Hasher, error) {
 		return nil, ErrHashLengthTooShort
 	}
 
-	tp, err := NewThreadPool(c.Threads, c.QueueSize, false)
+	tp, err := utils.NewThreadPool(c.Threads, c.QueueSize, false)
 	if err != nil {
 		return nil, err
 	}

@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/jaeiya/go-template/internal/lib/utils"
 )
 
 type ProcessStats struct {
@@ -73,7 +75,7 @@ func (ip ImageProcessor) updateImages(fi FilteredImages) (ProcessStats, error) {
 		queueSize = 10
 	}
 
-	tp, err := NewThreadPool(runtime.NumCPU(), queueSize, false)
+	tp, err := utils.NewThreadPool(runtime.NumCPU(), queueSize, false)
 	if err != nil {
 		return ProcessStats{}, err
 	}

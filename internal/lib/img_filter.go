@@ -5,8 +5,8 @@ import (
 )
 
 type FilteredImages struct {
-	newImageHashes  map[string]string
-	dupeImageHashes []string
+	imagePathMap   map[string]string
+	dupeImagePaths []string
 }
 
 func NewImageFilter() ImageFilter {
@@ -15,38 +15,27 @@ func NewImageFilter() ImageFilter {
 
 type ImageFilter struct{}
 
-func (ImageFilter) FilterImages(hashInfo []HashInfo, fr *FilteredImages) {
-	oldImageHashes := map[string]string{}
-	newImageHashes := map[string]string{}
-	dupeImageHashes := []string{}
+func (ImageFilter) FilterImages(hashResult HashResult, fi *FilteredImages) {
+	imagePathMap := map[string]string{}
+	dupeImagePaths := []string{}
 
-	for _, h := range hashInfo {
-		if h.err != nil {
-			fmt.Println(h.err)
+	for _, hashInfo := range hashResult.newHashes {
+		if hashInfo.err != nil {
+			fmt.Println(hashInfo.err)
 			continue
 		}
 
-		if h.cached {
-			oldImageHashes[h.hash] = h.path
+		_, isOldDupe := hashResult.oldHashes[hashInfo.hash]
+		_, isNewDupe := imagePathMap[hashInfo.hash]
+
+		if isOldDupe || isNewDupe {
+			dupeImagePaths = append(dupeImagePaths, hashInfo.path)
 			continue
 		}
 
-		if _, ok := newImageHashes[h.hash]; ok {
-			dupeImageHashes = append(dupeImageHashes, h.path)
-			continue
-		}
-
-		newImageHashes[h.hash] = h.path
+		imagePathMap[hashInfo.hash] = hashInfo.path
 	}
 
-	for oldImgHash := range oldImageHashes {
-		if imgPath, ok := newImageHashes[oldImgHash]; ok {
-			dupeImageHashes = append(dupeImageHashes, imgPath)
-			delete(newImageHashes, oldImgHash)
-			continue
-		}
-	}
-
-	fr.newImageHashes = newImageHashes
-	fr.dupeImageHashes = dupeImageHashes
+	fi.imagePathMap = imagePathMap
+	fi.dupeImagePaths = dupeImagePaths
 }

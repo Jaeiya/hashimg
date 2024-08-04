@@ -20,6 +20,11 @@ var (
 	ErrHashLengthTooShort = errors.New("hash length must be at least 10 characters")
 )
 
+type HashResult struct {
+	newHashes []HashInfo
+	oldHashes map[string]HashInfo
+}
+
 type HashInfo struct {
 	hash   string
 	path   string
@@ -35,7 +40,7 @@ type HasherConfig struct {
 	// Queue channel minimum size
 	QueueSize int
 	// Container for hash results
-	HashInfo *[]HashInfo
+	HashResult *HashResult
 	// Should be a unique string
 	Prefix string
 }
@@ -44,7 +49,7 @@ type Hasher struct {
 	mux        sync.Mutex
 	threadPool *utils.ThreadPool
 	hashLen    int
-	hashInfo   *[]HashInfo
+	hashResult *HashResult
 	prefix     string
 }
 
@@ -59,8 +64,12 @@ func NewHasher(c HasherConfig) (*Hasher, error) {
 		return nil, ErrHashPrefixTooShort
 	}
 
-	if c.HashInfo == nil {
+	if c.HashResult == nil {
 		return nil, ErrHashInfoNil
+	}
+
+	if c.HashResult.oldHashes == nil {
+		c.HashResult.oldHashes = make(map[string]HashInfo)
 	}
 
 	if c.Length < 10 {
@@ -75,7 +84,7 @@ func NewHasher(c HasherConfig) (*Hasher, error) {
 	return &Hasher{
 		threadPool: tp,
 		hashLen:    c.Length,
-		hashInfo:   c.HashInfo,
+		hashResult: c.HashResult,
 		prefix:     c.Prefix,
 	}, nil
 }
@@ -88,13 +97,16 @@ func (h *Hasher) Hash(fileName string, cs CacheStatus, filePath string) {
 			ext := fPath.Ext(fileName)
 			hi.hash = strings.TrimPrefix(fileName[0:len(fileName)-len(ext)], h.prefix)
 			hi.cached = true
-			hi.err = nil
 		} else {
 			hi.hash, hi.err = h.computeHash(filePath)
 		}
 
 		h.mux.Lock()
-		*h.hashInfo = append(*h.hashInfo, hi)
+		if cs == Cached {
+			h.hashResult.oldHashes[hi.hash] = hi
+		} else {
+			h.hashResult.newHashes = append(h.hashResult.newHashes, hi)
+		}
 		h.mux.Unlock()
 	})
 }

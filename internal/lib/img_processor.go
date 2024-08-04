@@ -38,14 +38,14 @@ func (ip ImageProcessor) Process(dir string, hashLen int, iMap ImageMap) (Proces
 		queueSize = 10
 	}
 
-	hi := []HashInfo{}
+	hi := HashResult{}
 
 	hasher, err := NewHasher(HasherConfig{
-		Length:    hashLen,
-		Threads:   runtime.NumCPU(),
-		QueueSize: queueSize,
-		HashInfo:  &hi,
-		Prefix:    ip.hashPrefix,
+		Length:     hashLen,
+		Threads:    runtime.NumCPU(),
+		QueueSize:  queueSize,
+		HashResult: &hi,
+		Prefix:     ip.hashPrefix,
 	})
 	if err != nil {
 		return ProcessStats{}, err
@@ -65,11 +65,11 @@ func (ip ImageProcessor) Process(dir string, hashLen int, iMap ImageMap) (Proces
 
 func (ip ImageProcessor) updateImages(fi FilteredImages) (ProcessStats, error) {
 	start := time.Now()
-	if len(fi.dupeImageHashes) == 0 && len(fi.newImageHashes) == 0 {
+	if len(fi.dupeImagePaths) == 0 && len(fi.imagePathMap) == 0 {
 		return ProcessStats{}, nil
 	}
 
-	workLen := len(fi.dupeImageHashes) + len(fi.newImageHashes)
+	workLen := len(fi.dupeImagePaths) + len(fi.imagePathMap)
 	queueSize := workLen
 	if queueSize < 10 {
 		queueSize = 10
@@ -83,7 +83,7 @@ func (ip ImageProcessor) updateImages(fi FilteredImages) (ProcessStats, error) {
 	errors := []error{}
 	mux := sync.Mutex{}
 
-	for _, imgPath := range fi.dupeImageHashes {
+	for _, imgPath := range fi.dupeImagePaths {
 		tp.Queue(func() {
 			err := os.Remove(imgPath)
 			if err != nil {
@@ -94,7 +94,7 @@ func (ip ImageProcessor) updateImages(fi FilteredImages) (ProcessStats, error) {
 		})
 	}
 
-	for newImgHash, imgPath := range fi.newImageHashes {
+	for newImgHash, imgPath := range fi.imagePathMap {
 		tp.Queue(func() {
 			dir := fPath.Dir(imgPath)
 			// Uppercase extensions are ugly and inconsistent
@@ -117,7 +117,7 @@ func (ip ImageProcessor) updateImages(fi FilteredImages) (ProcessStats, error) {
 
 	return ProcessStats{
 		Total: workLen,
-		New:   len(fi.newImageHashes),
-		Dup:   len(fi.dupeImageHashes),
+		New:   len(fi.imagePathMap),
+		Dup:   len(fi.dupeImagePaths),
 	}, nil
 }

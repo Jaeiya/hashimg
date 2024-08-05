@@ -115,8 +115,8 @@ func (h *Hasher) Wait() {
 	h.threadPool.Wait()
 }
 
-func (h *Hasher) computeHash(fileName string) (string, error) {
-	file, err := os.Open(fileName)
+func (h *Hasher) computeHash(filePath string) (string, error) {
+	file, err := os.Open(filePath)
 	if err != nil {
 		return "", err
 	}

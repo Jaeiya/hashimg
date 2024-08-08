@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -18,11 +19,29 @@ const (
 )
 
 var (
-	headerStyle  = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#34C8FF"))
-	noStyle      = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFA31F"))
-	yesStyle     = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#A8FF00"))
-	helpStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#626262"))
-	instantStyle = lipgloss.NewStyle().Italic(true).Foreground(lipgloss.Color("#FFC000"))
+	headerStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#34C8FF"))
+	noStyle     = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFA31F"))
+	yesStyle    = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#A8FF00"))
+	helpStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#626262"))
+
+	resultsHeaderStyle = yesStyle.Width(40).
+				AlignHorizontal(lipgloss.Center).
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(lipgloss.Color("#848994"))
+
+	resultsLabelStyle = lipgloss.NewStyle().
+				AlignHorizontal(lipgloss.Right).
+				Width(22).
+				PaddingLeft(padding).
+				PaddingRight(1).
+				BorderRight(true).
+				BorderStyle(lipgloss.NormalBorder()).
+				BorderForeground(lipgloss.Color("#848994")).
+				Foreground(lipgloss.Color("#FFF"))
+
+	resultsValueStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#00FFD2"))
+	resultsDupeStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFD200"))
+	resultsCacheStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#E3BAFF"))
 )
 
 type (
@@ -210,22 +229,37 @@ func (m *TuiModel) viewProgress() string {
 	return s
 }
 
-func (m *TuiModel) viewResults() string {
-	pad := m.padding
-	s := ""
-	s = fmt.Sprintf("\n%s%s\n\n", pad, yesStyle.Render("Hashimg Results"))
-	s += fmt.Sprintf("%s     Images: %d\n", pad, m.progressStatus.TotalImages)
-	s += fmt.Sprintf("%s      Dupes: %d\n", pad, m.progressStatus.DupeImages)
-	s += fmt.Sprintf("%s     Cached: %d\n", pad, m.progressStatus.CachedImages)
-	s += fmt.Sprintf("%s     Hash Speed: %s\n", pad, m.progressStatus.HashingTook)
-	s += fmt.Sprintf("%s     Update Speed: %s\n", pad, m.progressStatus.UpdatingTook)
+type Stat struct {
+	label      string
+	value      string
+	valueStyle lipgloss.Style
+}
 
-	ft := time.Duration.String(m.progressStatus.FilterTook)
-	filterStyle := ft
-	if ft == "0s" {
-		filterStyle = instantStyle.Render("Instant")
+func (m *TuiModel) viewResults() string {
+	s := "\n"
+	s += fmt.Sprintf("%s\n\n", resultsHeaderStyle.Render("Hashimg Results"))
+
+	stats := []Stat{
+		{"Total Images", strconv.Itoa(int(m.progressStatus.TotalImages)), resultsValueStyle},
+		{"Dupes", strconv.Itoa(int(m.progressStatus.DupeImages)), resultsDupeStyle},
+		{"Cached", strconv.Itoa(int(m.progressStatus.CachedImages)), resultsCacheStyle},
+		{"", "", resultsValueStyle},
+		{"Hash Speed", time.Duration.String(m.progressStatus.HashingTook), resultsValueStyle},
+		{"Filter Speed", time.Duration.String(m.progressStatus.FilterTook), resultsValueStyle},
+		{
+			"Update Speed",
+			time.Duration.String(m.progressStatus.UpdatingTook),
+			resultsValueStyle,
+		},
 	}
-	s += fmt.Sprintf("%s     Filter Speed: %s\n", pad, filterStyle)
+
+	for _, stat := range stats {
+		s += fmt.Sprintf(
+			"%s %s\n",
+			resultsLabelStyle.Render(stat.label),
+			stat.valueStyle.Render(stat.value),
+		)
+	}
 
 	return s
 }

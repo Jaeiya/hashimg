@@ -259,8 +259,12 @@ func (m TuiModel) viewResults() string {
 	}
 
 	for _, stat := range stats {
+		isInstant := strings.Contains(stat.value, "0") &&
+			strings.Contains(stat.value, "ns") &&
+			!strings.Contains(stat.value, ".")
+
 		// Ignore instantaneous speed results
-		if stat.value == "0ns" {
+		if isInstant {
 			continue
 		}
 		s += fmt.Sprintf(

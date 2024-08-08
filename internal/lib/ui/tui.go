@@ -19,15 +19,17 @@ const (
 )
 
 var (
+	borderColor = "#848994"
+	brightColor = "#A8FF00"
 	headerStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#34C8FF"))
 	noStyle     = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFA31F"))
-	yesStyle    = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#A8FF00"))
+	brightStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color(brightColor))
 	helpStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#626262"))
 
-	resultsHeaderStyle = yesStyle.Width(40).
+	resultsHeaderStyle = brightStyle.Width(40).
 				AlignHorizontal(lipgloss.Center).
 				Border(lipgloss.RoundedBorder()).
-				BorderForeground(lipgloss.Color("#848994"))
+				BorderForeground(lipgloss.Color(borderColor))
 
 	resultsLabelStyle = lipgloss.NewStyle().
 				AlignHorizontal(lipgloss.Right).
@@ -36,15 +38,15 @@ var (
 				PaddingRight(1).
 				BorderRight(true).
 				BorderStyle(lipgloss.NormalBorder()).
-				BorderForeground(lipgloss.Color("#848994")).
+				BorderForeground(lipgloss.Color(borderColor)).
 				Foreground(lipgloss.Color("#FFF"))
 
 	resultsTImagesStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#34C8FF"))
 	resultsValueStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#00FFD2"))
 	resultsDupeStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFD200"))
 	resultsCacheStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#E3BAFF"))
-	resultsTTimeStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#A8FF00"))
-	timeNotationStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#909FAB"))
+	resultsTTimeStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color(brightColor))
+	timeNotationStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color(borderColor))
 )
 
 type (
@@ -71,8 +73,8 @@ type TuiModel struct {
 func NewTUI(workFunc func(ps *models.ProcessStatus)) TuiModel {
 	return TuiModel{
 		workFunc:          workFunc,
-		hashProgressBar:   progress.New(progress.WithGradient("#34C8FF", "#A8FF00")),
-		updateProgressBar: progress.New(progress.WithGradient("#34C8FF", "#A8FF00")),
+		hashProgressBar:   progress.New(progress.WithGradient("#34C8FF", brightColor)),
+		updateProgressBar: progress.New(progress.WithGradient("#34C8FF", brightColor)),
 		progressStatus:    &models.ProcessStatus{},
 		padding:           strings.Repeat(" ", padding),
 	}
@@ -203,7 +205,7 @@ func (m TuiModel) viewSelection(s string, padding string) string {
 	} else {
 		selYes = ">"
 		s += fmt.Sprintf("%s  %s\n", padding, "No")
-		s += yesStyle.Render(fmt.Sprintf("%s%s %s", padding, selYes, "Yes"))
+		s += brightStyle.Render(fmt.Sprintf("%s%s %s", padding, selYes, "Yes"))
 	}
 	s += "\n\n" + padding + helpStyle.Render("Hashimg 1.0 - Press q or ctrl+c to quit") + "\n"
 	return s
@@ -214,16 +216,16 @@ func (m TuiModel) viewProgress() string {
 	s := ""
 
 	if m.hashProgressPercent == 0 && m.updateProgressPercent == 0 {
-		s = "\n" + pad + yesStyle.Render("Getting Ready...\n")
+		s = "\n" + pad + brightStyle.Render("Getting Ready...\n")
 	}
 
 	if m.hashProgressPercent > 0 {
-		s = "\n" + pad + yesStyle.Render("Hashing...\n")
+		s = "\n" + pad + brightStyle.Render("Hashing...\n")
 		s += "\n" + pad + m.hashProgressBar.ViewAs(m.hashProgressPercent) + "\n"
 	}
 
 	if m.updateProgressPercent > 0 {
-		s += "\n" + pad + yesStyle.Render("Updating...\n")
+		s += "\n" + pad + brightStyle.Render("Updating...\n")
 		s += "\n" + pad + m.updateProgressBar.ViewAs(m.updateProgressPercent) + "\n"
 	}
 

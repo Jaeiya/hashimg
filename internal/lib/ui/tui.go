@@ -214,7 +214,7 @@ func (m TuiModel) viewProgress() string {
 	s := ""
 
 	if m.hashProgressPercent == 0 && m.updateProgressPercent == 0 {
-		s = "\n" + brightStyle.Render("Getting Ready...\n")
+		s = "\n" + brightStyle.Render("Getting Ready...") + "\n"
 	}
 
 	if m.hashProgressPercent > 0 {

@@ -19,7 +19,7 @@ const (
 )
 
 var (
-	borderColor = "#848994"
+	borderColor = "#818C95"
 	brightColor = "#A8FF00"
 	baseStyle   = lipgloss.NewStyle().MarginLeft(leftMargin)
 
@@ -35,12 +35,12 @@ var (
 
 	resultsLabelStyle = baseStyle.
 				AlignHorizontal(lipgloss.Right).
-				Width(22).
+				Width(23).
 				PaddingRight(1).
 				BorderRight(true).
 				BorderStyle(lipgloss.NormalBorder()).
 				BorderForeground(lipgloss.Color(borderColor)).
-				Foreground(lipgloss.Color("#FFF"))
+				Foreground(lipgloss.Color("#DBEFFF"))
 
 	resultsTImagesStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#34C8FF"))
 	resultsValueStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#00FFD2"))

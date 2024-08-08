@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	padding          = 4
+	leftMargin       = 4
 	maxProgressWidth = 60
 	pollPerMilli     = 60
 )
@@ -21,20 +21,21 @@ const (
 var (
 	borderColor = "#848994"
 	brightColor = "#A8FF00"
-	headerStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#34C8FF"))
-	noStyle     = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFA31F"))
-	brightStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color(brightColor))
-	helpStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#626262"))
+	baseStyle   = lipgloss.NewStyle().MarginLeft(leftMargin)
+
+	headerStyle = baseStyle.Bold(true).Foreground(lipgloss.Color("#34C8FF"))
+	noStyle     = baseStyle.Bold(true).Foreground(lipgloss.Color("#FFA31F"))
+	brightStyle = baseStyle.Bold(true).Foreground(lipgloss.Color(brightColor))
+	helpStyle   = baseStyle.Foreground(lipgloss.Color("#626262"))
 
 	resultsHeaderStyle = brightStyle.Width(40).
 				AlignHorizontal(lipgloss.Center).
 				Border(lipgloss.RoundedBorder()).
 				BorderForeground(lipgloss.Color(borderColor))
 
-	resultsLabelStyle = lipgloss.NewStyle().
+	resultsLabelStyle = baseStyle.
 				AlignHorizontal(lipgloss.Right).
 				Width(22).
-				PaddingLeft(padding).
 				PaddingRight(1).
 				BorderRight(true).
 				BorderStyle(lipgloss.NormalBorder()).
@@ -61,7 +62,6 @@ type TuiModel struct {
 	selection             bool
 	isSelected            bool
 	isDone                bool
-	padding               string
 	workFunc              func(ps *models.ProcessStatus)
 	hashProgressBar       progress.Model
 	updateProgressBar     progress.Model
@@ -76,7 +76,6 @@ func NewTUI(workFunc func(ps *models.ProcessStatus)) TuiModel {
 		hashProgressBar:   progress.New(progress.WithGradient("#34C8FF", brightColor)),
 		updateProgressBar: progress.New(progress.WithGradient("#34C8FF", brightColor)),
 		progressStatus:    &models.ProcessStatus{},
-		padding:           strings.Repeat(" ", padding),
 	}
 }
 
@@ -90,9 +89,9 @@ func (m TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleKeys(msg)
 
 	case tea.WindowSizeMsg:
-		pSize := maxProgressWidth - padding
+		pSize := maxProgressWidth - leftMargin
 		if msg.Width < maxProgressWidth {
-			pSize = msg.Width - padding
+			pSize = msg.Width - leftMargin
 		}
 		m.hashProgressBar.Width = pSize
 		m.updateProgressBar.Width = pSize
@@ -127,13 +126,8 @@ func (m TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m TuiModel) View() string {
-	pad := strings.Repeat(" ", padding)
-	s := "\n" + headerStyle.Render(
-		fmt.Sprintf("%sWould you like to process this directory?", pad),
-	) + "\n\n"
-
 	if !m.isSelected {
-		return m.viewSelection(s, pad)
+		return m.viewSelection()
 	}
 
 	if m.selection && !m.isDone {
@@ -196,40 +190,38 @@ func (m TuiModel) pollUpdates() tea.Cmd {
 	})
 }
 
-func (m TuiModel) viewSelection(s string, padding string) string {
-	selNo, selYes := " ", " "
+func (m TuiModel) viewSelection() string {
+	s := "\n" + headerStyle.Render("Would you like to process this directory?") + "\n\n"
 	if !m.selection {
-		selNo = ">"
-		s += noStyle.Render(fmt.Sprintf("%s%s %s", padding, selNo, "No"))
-		s += fmt.Sprintf("\n%s  %s", padding, "Yes")
+		s += noStyle.Render("> No") + "\n"
+		s += baseStyle.Render("  Yes")
 	} else {
-		selYes = ">"
-		s += fmt.Sprintf("%s  %s\n", padding, "No")
-		s += brightStyle.Render(fmt.Sprintf("%s%s %s", padding, selYes, "Yes"))
+		s += baseStyle.Render("  No") + "\n"
+		s += brightStyle.Render("> Yes")
 	}
-	s += "\n\n" + padding + helpStyle.Render("Hashimg 1.0 - Press q or ctrl+c to quit") + "\n"
+	s += "\n\n" + helpStyle.Render("Hashimg 1.0 - Press q or ctrl+c to quit") + "\n"
 	return s
 }
 
 func (m TuiModel) viewProgress() string {
-	pad := m.padding
+	margin := strings.Repeat(" ", leftMargin)
 	s := ""
 
 	if m.hashProgressPercent == 0 && m.updateProgressPercent == 0 {
-		s = "\n" + pad + brightStyle.Render("Getting Ready...\n")
+		s = "\n" + brightStyle.Render("Getting Ready...\n")
 	}
 
 	if m.hashProgressPercent > 0 {
-		s = "\n" + pad + brightStyle.Render("Hashing...\n")
-		s += "\n" + pad + m.hashProgressBar.ViewAs(m.hashProgressPercent) + "\n"
+		s = "\n" + brightStyle.Render("Hashing...") + "\n"
+		s += "\n" + margin + m.hashProgressBar.ViewAs(m.hashProgressPercent) + "\n"
 	}
 
 	if m.updateProgressPercent > 0 {
-		s += "\n" + pad + brightStyle.Render("Updating...\n")
-		s += "\n" + pad + m.updateProgressBar.ViewAs(m.updateProgressPercent) + "\n"
+		s += "\n" + brightStyle.Render("Updating...") + "\n"
+		s += "\n" + margin + m.updateProgressBar.ViewAs(m.updateProgressPercent) + "\n"
 	}
 
-	s += "\n\n" + pad + helpStyle.Render("Hashimg 1.0 - Press q or ctrl+c to quit") + "\n"
+	s += "\n\n" + helpStyle.Render("Hashimg 1.0 - Press q or ctrl+c to quit") + "\n"
 
 	return s
 }
@@ -241,8 +233,7 @@ type Stat struct {
 }
 
 func (m TuiModel) viewResults() string {
-	s := "\n"
-	s += fmt.Sprintf("%s\n\n", resultsHeaderStyle.Render("Hashimg Results"))
+	s := fmt.Sprintf("\n%s\n\n", resultsHeaderStyle.Render("Hashimg Results"))
 
 	stats := []Stat{
 		{"Total Images", strconv.Itoa(int(m.progressStatus.TotalImages)), resultsTImagesStyle},

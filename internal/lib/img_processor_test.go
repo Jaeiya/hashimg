@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/jaeiya/go-template/internal/lib/models"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,8 +22,8 @@ func TestImageProcessor(t *testing.T) {
 		t.Parallel()
 		a := assert.New(t)
 		wd, _ := os.Getwd()
-		imgProcessor := NewImageProcessor(hashPrefix)
-		_, err := imgProcessor.Process(wd, 32, ImageMap{})
+		imgProcessor := NewImageProcessor(hashPrefix, ImageMap{}, &models.ProcessStatus{})
+		err := imgProcessor.Process(wd, 32)
 		a.ErrorContains(err, "empty image map")
 	})
 
@@ -156,8 +157,8 @@ func TestImageProcessor(t *testing.T) {
 			)
 			iMap, err := MapImages(dir, hashPrefix)
 			a.NoError(err)
-			imgProcessor := NewImageProcessor(hashPrefix)
-			_, err = imgProcessor.Process(dir, 32, iMap)
+			imgProcessor := NewImageProcessor(hashPrefix, iMap, &models.ProcessStatus{})
+			err = imgProcessor.Process(dir, 32)
 			a.NoError(err)
 
 			fileNames, err = readDir(dir)

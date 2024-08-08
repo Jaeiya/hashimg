@@ -15,7 +15,7 @@ func NewImageFilter() ImageFilter {
 
 type ImageFilter struct{}
 
-func (ImageFilter) FilterImages(hashResult HashResult, fi *FilteredImages) {
+func (ImageFilter) Filter(hashResult HashResult, fi *FilteredImages) {
 	imagePathMap := map[string]string{}
 	dupeImagePaths := []string{}
 

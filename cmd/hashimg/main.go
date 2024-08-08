@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"os"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jaeiya/go-template/internal/lib"
+	"github.com/jaeiya/go-template/internal/lib/models"
+	"github.com/jaeiya/go-template/internal/lib/ui"
 )
 
 /*
@@ -59,24 +62,24 @@ import (
 	  be hashed.
 */
 func main() {
-	wd, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println("\nProcessing: ", wd)
-	const hashPrefix = "0x@"
+	wd, _ := os.Getwd()
+	hashPrefix := "0xxs@"
 	iMap, err := lib.MapImages(wd, hashPrefix)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("\nLoaded:", len(iMap), "images")
-	imgProcessor := lib.NewImageProcessor(hashPrefix)
-	stats, err := imgProcessor.Process(wd, 32, iMap)
-	if err != nil {
-		panic(err)
+
+	workFunc := func(ps *models.ProcessStatus) {
+		imgProcessor := lib.NewImageProcessor(hashPrefix, iMap, ps)
+		err = imgProcessor.Process(wd, 32)
+		if err != nil {
+			panic(err)
+		}
 	}
 
-	fmt.Println("Cached:", stats.New)
-	fmt.Println(" Dupes:", stats.Dup)
+	tui := ui.NewTUI(workFunc)
+
+	if _, err := tea.NewProgram(tui).Run(); err != nil {
+		fmt.Println("Error running program:", err)
+	}
 }

@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	fPath "path/filepath"
@@ -9,28 +10,33 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jaeiya/go-template/internal/lib/models"
 	"github.com/jaeiya/go-template/internal/lib/utils"
 )
 
-type ProcessStats struct {
-	Total int
-	New   int
-	Dup   int
-}
+var ErrNoImages = errors.New("no images found in directory")
 
 type ImageProcessor struct {
-	hashPrefix string
+	hashPrefix    string
+	imageMap      ImageMap
+	processStatus *models.ProcessStatus
 }
 
-func NewImageProcessor(hashPrefix string) ImageProcessor {
-	return ImageProcessor{hashPrefix}
+func NewImageProcessor(
+	hashPrefix string,
+	imageMap ImageMap,
+	ps *models.ProcessStatus,
+) ImageProcessor {
+	return ImageProcessor{hashPrefix, imageMap, ps}
 }
 
-func (ip ImageProcessor) Process(dir string, hashLen int, iMap ImageMap) (ProcessStats, error) {
+func (ip ImageProcessor) Process(dir string, hashLen int) error {
 	start := time.Now()
-	mapLen := len(iMap)
+	mapLen := len(ip.imageMap)
+	ip.processStatus.MaxHashProgress = int32(mapLen)
+	ip.processStatus.TotalImages = int32(mapLen)
 	if mapLen == 0 {
-		return ProcessStats{}, fmt.Errorf("empty image map")
+		return ErrNoImages
 	}
 
 	queueSize := mapLen
@@ -48,28 +54,41 @@ func (ip ImageProcessor) Process(dir string, hashLen int, iMap ImageMap) (Proces
 		Prefix:     ip.hashPrefix,
 	})
 	if err != nil {
-		return ProcessStats{}, err
+		return err
 	}
 
-	for fileName, cacheStatus := range iMap {
-		hasher.Hash(fileName, cacheStatus, fPath.Join(dir, fileName))
+	for fileName, cacheStatus := range ip.imageMap {
+		hasher.Hash(fileName, cacheStatus, fPath.Join(dir, fileName), func(cs CacheStatus) {
+			if cs == Cached {
+				ip.processStatus.IncCachedImages()
+			}
+			ip.processStatus.IncHashProgress()
+		})
 	}
 
 	hasher.Wait()
-	fmt.Println("HashSpeed:", time.Since(start))
+	ip.processStatus.HashingTook = time.Since(start)
+	start = time.Now()
 	fi := &FilteredImages{}
 	imgFilter := NewImageFilter()
-	imgFilter.FilterImages(hi, fi)
+	imgFilter.Filter(hi, fi)
+	ip.processStatus.FilterTook = time.Since(start)
 	return ip.updateImages(*fi)
 }
 
-func (ip ImageProcessor) updateImages(fi FilteredImages) (ProcessStats, error) {
+func (ip ImageProcessor) updateImages(fi FilteredImages) error {
 	start := time.Now()
-	if len(fi.dupeImagePaths) == 0 && len(fi.imagePathMap) == 0 {
-		return ProcessStats{}, nil
+
+	dupeLen := len(fi.dupeImagePaths)
+	renameLen := len(fi.imagePathMap)
+	if dupeLen == 0 && renameLen == 0 {
+		return nil
 	}
 
+	ip.processStatus.DupeImages = int32(dupeLen)
+	ip.processStatus.NewImages = int32(renameLen)
 	workLen := len(fi.dupeImagePaths) + len(fi.imagePathMap)
+	ip.processStatus.MaxUpdateProgress = int32(workLen)
 	queueSize := workLen
 	if queueSize < 10 {
 		queueSize = 10
@@ -77,7 +96,7 @@ func (ip ImageProcessor) updateImages(fi FilteredImages) (ProcessStats, error) {
 
 	tp, err := utils.NewThreadPool(runtime.NumCPU(), queueSize, false)
 	if err != nil {
-		return ProcessStats{}, err
+		return err
 	}
 
 	errors := []error{}
@@ -91,6 +110,7 @@ func (ip ImageProcessor) updateImages(fi FilteredImages) (ProcessStats, error) {
 				errors = append(errors, err)
 				mux.Unlock()
 			}
+			ip.processStatus.IncUpdateProgress()
 		})
 	}
 
@@ -106,18 +126,14 @@ func (ip ImageProcessor) updateImages(fi FilteredImages) (ProcessStats, error) {
 				errors = append(errors, err)
 				mux.Unlock()
 			}
+			ip.processStatus.IncUpdateProgress()
 		})
 	}
 
 	tp.Wait()
-	fmt.Println("UpdateSpeed:", time.Since(start))
+	ip.processStatus.UpdatingTook = time.Since(start)
 	if len(errors) > 0 {
-		return ProcessStats{}, fmt.Errorf("update errors: %v", errors)
+		return fmt.Errorf("update errors: %v", errors)
 	}
-
-	return ProcessStats{
-		Total: workLen,
-		New:   len(fi.imagePathMap),
-		Dup:   len(fi.dupeImagePaths),
-	}, nil
+	return nil
 }

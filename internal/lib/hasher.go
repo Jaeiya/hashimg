@@ -89,7 +89,12 @@ func NewHasher(c HasherConfig) (*Hasher, error) {
 	}, nil
 }
 
-func (h *Hasher) Hash(fileName string, cs CacheStatus, filePath string) {
+func (h *Hasher) Hash(
+	fileName string,
+	cs CacheStatus,
+	filePath string,
+	callBack func(cs CacheStatus),
+) {
 	h.threadPool.Queue(func() {
 		hi := HashInfo{path: filePath}
 
@@ -108,6 +113,7 @@ func (h *Hasher) Hash(fileName string, cs CacheStatus, filePath string) {
 			h.hashResult.newHashes = append(h.hashResult.newHashes, hi)
 		}
 		h.mux.Unlock()
+		callBack(cs)
 	})
 }
 

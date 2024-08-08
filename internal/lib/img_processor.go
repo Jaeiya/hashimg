@@ -17,9 +17,10 @@ import (
 var ErrNoImages = errors.New("no images found in directory")
 
 type ImageProcessor struct {
-	hashPrefix    string
-	imageMap      ImageMap
-	processStatus *models.ProcessStatus
+	hashPrefix       string
+	imageMap         ImageMap
+	processStatus    *models.ProcessStatus
+	processStartTime time.Time
 }
 
 func NewImageProcessor(
@@ -27,7 +28,7 @@ func NewImageProcessor(
 	imageMap ImageMap,
 	ps *models.ProcessStatus,
 ) ImageProcessor {
-	return ImageProcessor{hashPrefix, imageMap, ps}
+	return ImageProcessor{hashPrefix, imageMap, ps, time.Now()}
 }
 
 func (ip ImageProcessor) Process(dir string, hashLen int) error {
@@ -82,6 +83,7 @@ func (ip ImageProcessor) updateImages(fi FilteredImages) error {
 	dupeLen := len(fi.dupeImagePaths)
 	renameLen := len(fi.imagePathMap)
 	if dupeLen == 0 && renameLen == 0 {
+		ip.processStatus.TotalTime = time.Since(ip.processStartTime)
 		return nil
 	}
 
@@ -132,6 +134,7 @@ func (ip ImageProcessor) updateImages(fi FilteredImages) error {
 
 	tp.Wait()
 	ip.processStatus.UpdatingTook = time.Since(start)
+	ip.processStatus.TotalTime = time.Since(ip.processStartTime)
 	if len(errors) > 0 {
 		return fmt.Errorf("update errors: %v", errors)
 	}

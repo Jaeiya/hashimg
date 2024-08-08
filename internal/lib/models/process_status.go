@@ -21,6 +21,7 @@ type ProcessStatus struct {
 	HashingTook       time.Duration
 	UpdatingTook      time.Duration
 	FilterTook        time.Duration
+	TotalTime         time.Duration
 }
 
 // IncProgress atomically increments HashProgress. This makes it

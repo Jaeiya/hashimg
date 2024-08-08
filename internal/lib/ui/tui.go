@@ -39,9 +39,12 @@ var (
 				BorderForeground(lipgloss.Color("#848994")).
 				Foreground(lipgloss.Color("#FFF"))
 
-	resultsValueStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#00FFD2"))
-	resultsDupeStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFD200"))
-	resultsCacheStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#E3BAFF"))
+	resultsTImagesStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#34C8FF"))
+	resultsValueStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#00FFD2"))
+	resultsDupeStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFD200"))
+	resultsCacheStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#E3BAFF"))
+	resultsTTimeStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#A8FF00"))
+	timeNotationStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#909FAB"))
 )
 
 type (
@@ -191,7 +194,7 @@ func (m TuiModel) pollUpdates() tea.Cmd {
 	})
 }
 
-func (m *TuiModel) viewSelection(s string, padding string) string {
+func (m TuiModel) viewSelection(s string, padding string) string {
 	selNo, selYes := " ", " "
 	if !m.selection {
 		selNo = ">"
@@ -206,7 +209,7 @@ func (m *TuiModel) viewSelection(s string, padding string) string {
 	return s
 }
 
-func (m *TuiModel) viewProgress() string {
+func (m TuiModel) viewProgress() string {
 	pad := m.padding
 	s := ""
 
@@ -235,25 +238,31 @@ type Stat struct {
 	valueStyle lipgloss.Style
 }
 
-func (m *TuiModel) viewResults() string {
+func (m TuiModel) viewResults() string {
 	s := "\n"
 	s += fmt.Sprintf("%s\n\n", resultsHeaderStyle.Render("Hashimg Results"))
 
 	stats := []Stat{
-		{"Total Images", strconv.Itoa(int(m.progressStatus.TotalImages)), resultsValueStyle},
+		{"Total Images", strconv.Itoa(int(m.progressStatus.TotalImages)), resultsTImagesStyle},
 		{"Dupes", strconv.Itoa(int(m.progressStatus.DupeImages)), resultsDupeStyle},
 		{"Cached", strconv.Itoa(int(m.progressStatus.CachedImages)), resultsCacheStyle},
 		{"", "", resultsValueStyle},
-		{"Hash Speed", time.Duration.String(m.progressStatus.HashingTook), resultsValueStyle},
-		{"Filter Speed", time.Duration.String(m.progressStatus.FilterTook), resultsValueStyle},
+		{"Hash Speed", formatDuration(m.progressStatus.HashingTook), resultsValueStyle},
+		{"Filter Speed", formatDuration(m.progressStatus.FilterTook), resultsValueStyle},
 		{
 			"Update Speed",
-			time.Duration.String(m.progressStatus.UpdatingTook),
+			formatDuration(m.progressStatus.UpdatingTook),
 			resultsValueStyle,
 		},
+		{"", "", resultsValueStyle},
+		{"Total Time", formatDuration(m.progressStatus.TotalTime), resultsTTimeStyle},
 	}
 
 	for _, stat := range stats {
+		// Ignore instantaneous speed results
+		if stat.value == "0ns" {
+			continue
+		}
 		s += fmt.Sprintf(
 			"%s %s\n",
 			resultsLabelStyle.Render(stat.label),
@@ -262,4 +271,18 @@ func (m *TuiModel) viewResults() string {
 	}
 
 	return s
+}
+
+func formatDuration(d time.Duration) string {
+	style := timeNotationStyle
+	switch {
+	case d >= time.Second:
+		return fmt.Sprintf("%.2f"+style.Render("s"), d.Seconds())
+	case d >= time.Millisecond:
+		return fmt.Sprintf("%.2f"+style.Render("ms"), float64(d)/float64(time.Millisecond))
+	case d >= time.Microsecond:
+		return fmt.Sprintf("%.2f"+style.Render("µs"), float64(d)/float64(time.Microsecond))
+	default:
+		return fmt.Sprintf("%d"+style.Render("ns"), d.Nanoseconds())
+	}
 }

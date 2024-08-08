@@ -58,6 +58,12 @@ type (
 	MsgDone            bool
 )
 
+type ResultDisplayItem struct {
+	label      string
+	value      string
+	valueStyle lipgloss.Style
+}
+
 type TuiModel struct {
 	selection             bool
 	isSelected            bool
@@ -226,16 +232,10 @@ func (m TuiModel) viewProgress() string {
 	return s
 }
 
-type Stat struct {
-	label      string
-	value      string
-	valueStyle lipgloss.Style
-}
-
 func (m TuiModel) viewResults() string {
 	s := fmt.Sprintf("\n%s\n\n", resultsHeaderStyle.Render("Hashimg Results"))
 
-	stats := []Stat{
+	items := []ResultDisplayItem{
 		{"Total Images", strconv.Itoa(int(m.progressStatus.TotalImages)), resultsTImagesStyle},
 		{"Dupes", strconv.Itoa(int(m.progressStatus.DupeImages)), resultsDupeStyle},
 		{"Cached", strconv.Itoa(int(m.progressStatus.CachedImages)), resultsCacheStyle},
@@ -251,10 +251,10 @@ func (m TuiModel) viewResults() string {
 		{"Total Time", formatDuration(m.progressStatus.TotalTime), resultsTTimeStyle},
 	}
 
-	for _, stat := range stats {
-		isInstant := strings.Contains(stat.value, "0") &&
-			strings.Contains(stat.value, "ns") &&
-			!strings.Contains(stat.value, ".")
+	for _, item := range items {
+		isInstant := strings.Contains(item.value, "0") &&
+			strings.Contains(item.value, "ns") &&
+			!strings.Contains(item.value, ".")
 
 		// Ignore instantaneous speed results
 		if isInstant {
@@ -262,8 +262,8 @@ func (m TuiModel) viewResults() string {
 		}
 		s += fmt.Sprintf(
 			"%s %s\n",
-			resultsLabelStyle.Render(stat.label),
-			stat.valueStyle.Render(stat.value),
+			resultsLabelStyle.Render(item.label),
+			item.valueStyle.Render(item.value),
 		)
 	}
 

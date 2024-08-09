@@ -102,6 +102,7 @@ func (m TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.hashProgressBar.Width = pSize
 		m.updateProgressBar.Width = pSize
+		return m, nil
 
 	case MsgHashProgress:
 		progressBy := 100 / float64(msg.MaxHashProgress)

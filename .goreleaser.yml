@@ -18,9 +18,6 @@ archives:
   - format_overrides:
       - goos: windows
         format: zip
-    files:
-      - LICENSE.txt
-      - README.md
 
 release:
   github:

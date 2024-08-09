@@ -1,0 +1,31 @@
+builds:
+  - main: ./cmd/hashimg
+    binary: hashimg
+    flags:
+      - -trimpath
+    gcflags:
+      - "all=-B -l=120"
+    env:
+      - CGO_ENABLED=0
+    goarch:
+      - amd64
+      - arm64
+    goamd64:
+      - v2
+      - v3
+
+archives:
+  - format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - LICENSE.txt
+      - README.md
+
+release:
+  github:
+    owner: Jaeiya
+    name: https://github.com/Jaeiya/hashimg
+
+universal_binaries:
+  - replace: true

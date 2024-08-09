@@ -12,6 +12,16 @@ billion images is `1 in 2^64` or `1 in 18.4 Quintillion`.
 Those odds are what we can consider a "virtual impossibility" and therefore I'm not worried about
 finding false positives; it's good enough for my use case and probably most peoples use cases.
 
+### Build Instructions
+
+You can download the source and build this for either Windows or Linux, using their respective build
+scripts `build.bat` (for Windows) or `build.sh` (for Linux). They will both build a `hashimg.exe`
+to the `/bin` folder.
+
+If you want `hashimg.exe` to be accessible from any directory in your terminal, then you'll have to
+move the program to a path that's already part of your `PATH` environment variable, or add a new
+path to it that points to the location of `hashimg.exe`.
+
 ### Expectations
 
 I work on this as I'm inspired to do so. I would not expect any regular updates but I do plan to add a

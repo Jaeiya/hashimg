@@ -40,7 +40,7 @@ func MapImages(dir, hashPrefix string) (ImageMap, error) {
 	}
 
 	if len(dirEntries) == 0 {
-		return nil, fmt.Errorf("empty directory: %s", dir)
+		return nil, ErrNoImages
 	}
 
 	iMap := ImageMap{}

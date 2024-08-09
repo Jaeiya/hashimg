@@ -69,6 +69,11 @@ func (ip ImageProcessor) Process(dir string, hashLen int) error {
 
 	hasher.Wait()
 	ip.processStatus.HashingTook = time.Since(start)
+	hashErr := verifyHashResult(hi)
+	if hashErr != nil {
+		ip.processStatus.HashErr = hashErr
+		return hashErr
+	}
 	start = time.Now()
 	fi := &FilteredImages{}
 	imgFilter := NewImageFilter()
@@ -110,6 +115,7 @@ func (ip ImageProcessor) updateImages(fi FilteredImages) error {
 			if err != nil {
 				mux.Lock()
 				errors = append(errors, err)
+				ip.processStatus.UpdateErr = err
 				mux.Unlock()
 			}
 			ip.processStatus.IncUpdateProgress()
@@ -126,6 +132,7 @@ func (ip ImageProcessor) updateImages(fi FilteredImages) error {
 			if err != nil {
 				mux.Lock()
 				errors = append(errors, err)
+				ip.processStatus.UpdateErr = err
 				mux.Unlock()
 			}
 			ip.processStatus.IncUpdateProgress()
@@ -135,8 +142,25 @@ func (ip ImageProcessor) updateImages(fi FilteredImages) error {
 	tp.Wait()
 	ip.processStatus.UpdatingTook = time.Since(start)
 	ip.processStatus.TotalTime = time.Since(ip.processStartTime)
+
 	if len(errors) > 0 {
 		return fmt.Errorf("update errors: %v", errors)
 	}
+	return nil
+}
+
+func verifyHashResult(hr HashResult) error {
+	for _, r := range hr.newHashes {
+		if r.err != nil {
+			return r.err
+		}
+	}
+
+	for _, r := range hr.oldHashes {
+		if r.err != nil {
+			return r.err
+		}
+	}
+
 	return nil
 }

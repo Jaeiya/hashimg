@@ -33,6 +33,13 @@ var (
 				Border(lipgloss.RoundedBorder()).
 				BorderForeground(lipgloss.Color(borderColor))
 
+	errorHeaderStyle = baseStyle.
+				Width(40).
+				Padding(1, 2).
+				AlignHorizontal(lipgloss.Center).
+				Foreground(lipgloss.Color("#FF71CB")).
+				Background(lipgloss.Color("#131313"))
+
 	resultsLabelStyle = baseStyle.
 				AlignHorizontal(lipgloss.Right).
 				Width(23).
@@ -57,6 +64,10 @@ type (
 	MsgHashCompleted   bool
 	MsgUpdateCompleted bool
 	MsgDone            bool
+	MsgErr             struct {
+		name string
+		err  error
+	}
 )
 
 type ResultDisplayItem struct {
@@ -70,6 +81,7 @@ type TuiModel struct {
 	isSelected            bool
 	isDone                bool
 	workFunc              func(ps *models.ProcessStatus)
+	workErr               MsgErr
 	hashProgressBar       progress.Model
 	updateProgressBar     progress.Model
 	hashProgressPercent   float64
@@ -83,6 +95,7 @@ func NewTUI(workFunc func(ps *models.ProcessStatus)) TuiModel {
 		hashProgressBar:   progress.New(progress.WithGradient("#34C8FF", brightColor)),
 		updateProgressBar: progress.New(progress.WithGradient("#34C8FF", brightColor)),
 		progressStatus:    &models.ProcessStatus{},
+		workErr:           MsgErr{},
 	}
 }
 
@@ -122,6 +135,10 @@ func (m TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.hashProgressPercent = 1
 		return m, m.pollUpdates()
 
+	case MsgErr:
+		m.workErr = msg
+		return m, tea.Quit
+
 	case MsgDone:
 		m.isDone = true
 		return m, tea.Quit
@@ -129,11 +146,13 @@ func (m TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	default:
 		return m, nil
 	}
-
-	return m, nil
 }
 
 func (m TuiModel) View() string {
+	if m.workErr.err != nil {
+		return m.viewErr(m.workErr)
+	}
+
 	if !m.isSelected {
 		return m.viewSelection()
 	}
@@ -174,6 +193,14 @@ func (m TuiModel) handleKeys(keyMsg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m TuiModel) pollUpdates() tea.Cmd {
 	return tea.Tick(time.Millisecond*pollPerMilli, func(t time.Time) tea.Msg {
+		if m.progressStatus.HashErr != nil {
+			return MsgErr{"Hashing", m.progressStatus.HashErr}
+		}
+
+		if m.progressStatus.UpdateErr != nil {
+			return MsgErr{"Updating", m.progressStatus.UpdateErr}
+		}
+
 		if m.progressStatus.HashProgress != m.progressStatus.MaxHashProgress {
 			return MsgHashProgress(m.progressStatus)
 		}
@@ -270,6 +297,16 @@ func (m TuiModel) viewResults() string {
 		)
 	}
 
+	return s
+}
+
+func (m TuiModel) viewErr(e MsgErr) string {
+	s := "\n" + errorHeaderStyle.Render("Error Occurred During "+e.name) + "\n\n"
+
+	s += baseStyle.Width(60).
+		Foreground(lipgloss.Color("#E3F7FF")).
+		Render(fmt.Sprintf("%s", e.err)) +
+		"\n"
 	return s
 }
 

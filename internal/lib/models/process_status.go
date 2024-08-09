@@ -22,6 +22,8 @@ type ProcessStatus struct {
 	UpdatingTook      time.Duration
 	FilterTook        time.Duration
 	TotalTime         time.Duration
+	HashErr           error
+	UpdateErr         error
 }
 
 // IncProgress atomically increments HashProgress. This makes it

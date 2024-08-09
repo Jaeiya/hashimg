@@ -46,6 +46,7 @@ var (
 	resultsValueStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#00FFD2"))
 	resultsDupeStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFD200"))
 	resultsCacheStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#E3BAFF"))
+	resultsNewStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color(brightColor))
 	resultsTTimeStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color(brightColor))
 	timeNotationStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color(borderColor))
 )
@@ -239,6 +240,7 @@ func (m TuiModel) viewResults() string {
 		{"Total Images", strconv.Itoa(int(m.progressStatus.TotalImages)), resultsTImagesStyle},
 		{"Dupes", strconv.Itoa(int(m.progressStatus.DupeImages)), resultsDupeStyle},
 		{"Cached", strconv.Itoa(int(m.progressStatus.CachedImages)), resultsCacheStyle},
+		{"New", strconv.Itoa(int(m.progressStatus.NewImages)), resultsNewStyle},
 		{"", "", resultsValueStyle},
 		{"Hash Speed", formatDuration(m.progressStatus.HashingTook), resultsValueStyle},
 		{"Filter Speed", formatDuration(m.progressStatus.FilterTook), resultsValueStyle},

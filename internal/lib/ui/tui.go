@@ -26,7 +26,7 @@ var (
 	headerStyle = baseStyle.Bold(true).Foreground(lipgloss.Color("#34C8FF"))
 	noStyle     = baseStyle.Bold(true).Foreground(lipgloss.Color("#FFA31F"))
 	brightStyle = baseStyle.Bold(true).Foreground(lipgloss.Color(brightColor))
-	helpStyle   = baseStyle.Foreground(lipgloss.Color("#626262"))
+	footerStyle = baseStyle.Foreground(lipgloss.Color("#626262"))
 
 	resultsHeaderStyle = brightStyle.
 				Width(40).
@@ -88,15 +88,19 @@ type TuiModel struct {
 	hashProgressPercent   float64
 	updateProgressPercent float64
 	progressStatus        *models.ProcessStatus
+	footerText            string
 }
 
-func NewTUI(workFunc func(ps *models.ProcessStatus)) TuiModel {
+func NewTUI(appVersion string, workFunc func(ps *models.ProcessStatus)) TuiModel {
 	return TuiModel{
 		workFunc:          workFunc,
 		hashProgressBar:   progress.New(progress.WithGradient("#34C8FF", brightColor)),
 		updateProgressBar: progress.New(progress.WithGradient("#34C8FF", brightColor)),
 		progressStatus:    &models.ProcessStatus{},
 		workErr:           MsgErr{},
+		footerText: footerStyle.Render(
+			"Hashimg " + appVersion + " - Press q or ctrl+c to quit",
+		),
 	}
 }
 
@@ -235,7 +239,7 @@ func (m TuiModel) viewSelection() string {
 		s += baseStyle.Render("  No") + "\n"
 		s += brightStyle.Render("> Yes")
 	}
-	s += "\n\n" + helpStyle.Render("Hashimg 1.0 - Press q or ctrl+c to quit") + "\n"
+	s += "\n\n" + m.footerText + "\n"
 	return s
 }
 
@@ -257,7 +261,7 @@ func (m TuiModel) viewProgress() string {
 		s += "\n" + margin + m.updateProgressBar.ViewAs(m.updateProgressPercent) + "\n"
 	}
 
-	s += "\n\n" + helpStyle.Render("Hashimg 1.0 - Press q or ctrl+c to quit") + "\n"
+	s += "\n\n" + m.footerText + "\n"
 
 	return s
 }

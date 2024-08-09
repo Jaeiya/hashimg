@@ -12,6 +12,8 @@ import (
 	"github.com/jaeiya/go-template/internal/lib/ui"
 )
 
+const appVersion = "1.0.2"
+
 func main() {
 	wd, _ := os.Getwd()
 	hashPrefix := "0x@"
@@ -38,7 +40,7 @@ func main() {
 		_ = imgProcessor.Process(wd, 32)
 	}
 
-	tui := ui.NewTUI(workFunc)
+	tui := ui.NewTUI(appVersion, workFunc)
 
 	if _, err := tea.NewProgram(tui).Run(); err != nil {
 		fmt.Println("Error running program:", err)

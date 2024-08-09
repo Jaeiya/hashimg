@@ -28,10 +28,11 @@ var (
 	brightStyle = baseStyle.Bold(true).Foreground(lipgloss.Color(brightColor))
 	helpStyle   = baseStyle.Foreground(lipgloss.Color("#626262"))
 
-	resultsHeaderStyle = brightStyle.Width(40).
+	resultsHeaderStyle = brightStyle.
+				Width(40).
+				Padding(1, 0).
 				AlignHorizontal(lipgloss.Center).
-				Border(lipgloss.RoundedBorder()).
-				BorderForeground(lipgloss.Color(borderColor))
+				Background(lipgloss.Color("#003284"))
 
 	errorHeaderStyle = baseStyle.
 				Width(40).

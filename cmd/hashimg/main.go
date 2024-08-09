@@ -34,6 +34,7 @@ func main() {
 
 	workFunc := func(ps *models.ProcessStatus) {
 		imgProcessor := lib.NewImageProcessor(hashPrefix, iMap, ps)
+		// Errors are handled inside TUI
 		_ = imgProcessor.Process(wd, 32)
 	}
 

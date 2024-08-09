@@ -19,10 +19,5 @@ archives:
       - goos: windows
         format: zip
 
-release:
-  github:
-    owner: Jaeiya
-    name: https://github.com/Jaeiya/hashimg
-
 universal_binaries:
   - replace: true

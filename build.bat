@@ -4,6 +4,9 @@ set GOARCH=amd64
 set GOOS=windows
 set CGO_ENABLED=0
 
+REM For modern processors
+set GOAMD64=v3
+
 REM Build the Go application with optimization flags
 go build -ldflags="-s -w" -gcflags="all=-B -l=120" -trimpath -o "bin/hashimg.exe" "cmd/hashimg/main.go"
 

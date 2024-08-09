@@ -19,6 +19,18 @@ const (
 )
 
 var (
+	CautionForeColor = "#FFF10E"
+	CautionBackColor = "#131313"
+
+	CautionStyle = baseStyle.
+			Width(40).
+			AlignHorizontal(lipgloss.Center).
+			MarginTop(2).
+			MarginLeft(4).
+			Padding(1, 2).
+			Background(lipgloss.Color(CautionBackColor)).
+			Foreground(lipgloss.Color(CautionForeColor))
+
 	borderColor = "#818C95"
 	brightColor = "#A8FF00"
 	baseStyle   = lipgloss.NewStyle().MarginLeft(leftMargin)
@@ -39,7 +51,7 @@ var (
 				Padding(1, 2).
 				AlignHorizontal(lipgloss.Center).
 				Foreground(lipgloss.Color("#FF71CB")).
-				Background(lipgloss.Color("#131313"))
+				Background(lipgloss.Color(CautionBackColor))
 
 	resultsLabelStyle = baseStyle.
 				AlignHorizontal(lipgloss.Right).
@@ -170,7 +182,7 @@ func (m TuiModel) View() string {
 		return m.viewResults()
 	}
 
-	return "\nCancelled"
+	return m.viewCancel()
 }
 
 func (m TuiModel) handleKeys(keyMsg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -312,6 +324,11 @@ func (m TuiModel) viewErr(e MsgErr) string {
 		Foreground(lipgloss.Color("#E3F7FF")).
 		Render(fmt.Sprintf("%s", e.err)) +
 		"\n"
+	return s
+}
+
+func (m TuiModel) viewCancel() string {
+	s := CautionStyle.Render("Aborted by User") + "\n"
 	return s
 }
 

@@ -371,6 +371,7 @@ func (m TuiModel) viewResults() string {
 		{"Cached", strconv.Itoa(int(m.progressStatus.CachedImages)), resultsCacheStyle},
 		{"New", strconv.Itoa(int(m.progressStatus.NewImages)), resultsNewStyle},
 		{"", "", resultsValueStyle},
+		{"Analyze Speed", formatDuration(m.progressStatus.AnalyzeTook), resultsValueStyle},
 		{"Hash Speed", formatDuration(m.progressStatus.HashingTook), resultsValueStyle},
 		{"Filter Speed", formatDuration(m.progressStatus.FilterTook), resultsValueStyle},
 		{

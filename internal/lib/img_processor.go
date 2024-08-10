@@ -29,7 +29,6 @@ func NewImageProcessor(
 }
 
 func (ip ImageProcessor) Process(dir string, hashLen int, useAvgBufferSize bool) error {
-	start := time.Now()
 	mapLen := len(ip.imageMap)
 	ip.processStatus.MaxHashProgress = int32(mapLen)
 	ip.processStatus.TotalImages = int32(mapLen)
@@ -42,7 +41,7 @@ func (ip ImageProcessor) Process(dir string, hashLen int, useAvgBufferSize bool)
 		queueSize = 10
 	}
 
-	hi := HashResult{}
+	analyzeStart := time.Now()
 	var bufferSize int64
 	if useAvgBufferSize {
 		avgBytes, err := getAvgFileSize(dir)
@@ -50,13 +49,16 @@ func (ip ImageProcessor) Process(dir string, hashLen int, useAvgBufferSize bool)
 			return err
 		}
 		bufferSize = avgBytes
+		ip.processStatus.AnalyzeTook = time.Since(analyzeStart)
 	}
 
+	start := time.Now()
+	hr := HashResult{}
 	hasher, err := NewHasher(HasherConfig{
 		Length:     hashLen,
 		Threads:    runtime.NumCPU(),
 		QueueSize:  queueSize,
-		HashResult: &hi,
+		HashResult: &hr,
 		Prefix:     ip.hashPrefix,
 		BufferSize: bufferSize,
 	})
@@ -75,7 +77,7 @@ func (ip ImageProcessor) Process(dir string, hashLen int, useAvgBufferSize bool)
 
 	hasher.Wait()
 	ip.processStatus.HashingTook = time.Since(start)
-	hashErr := verifyHashResult(hi)
+	hashErr := verifyHashResult(hr)
 	if hashErr != nil {
 		ip.processStatus.HashErr = hashErr
 		return hashErr
@@ -83,7 +85,7 @@ func (ip ImageProcessor) Process(dir string, hashLen int, useAvgBufferSize bool)
 	start = time.Now()
 	fi := &FilteredImages{}
 	imgFilter := NewImageFilter()
-	imgFilter.Filter(hi, fi)
+	imgFilter.Filter(hr, fi)
 	ip.processStatus.FilterTook = time.Since(start)
 	return ip.updateImages(*fi)
 }

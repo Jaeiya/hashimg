@@ -21,6 +21,7 @@ type ProcessStatus struct {
 	HashingTook       time.Duration
 	UpdatingTook      time.Duration
 	FilterTook        time.Duration
+	AnalyzeTook       time.Duration
 	TotalTime         time.Duration
 	HashErr           error
 	UpdateErr         error

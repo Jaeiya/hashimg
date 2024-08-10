@@ -119,7 +119,10 @@ func NewTUI(
 		updateProgressBar: progress.New(progress.WithGradient("#34C8FF", brightColor)),
 		progressStatus:    &models.ProcessStatus{},
 		workErr:           MsgErr{},
-		hddList:           []string{"HDD", "SSD"},
+		hddList: []string{
+			"HDD - Hard Disk Drive (Noisy)",
+			"SSD - Solid State Drive (Flash)",
+		},
 		footerText: footerStyle.Render(
 			"Hashimg " + appVersion + " - Press Esc or Ctrl+C to quit",
 		),

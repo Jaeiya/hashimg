@@ -77,6 +77,7 @@ type (
 	MsgHashCompleted   bool
 	MsgUpdateCompleted bool
 	MsgDone            bool
+	MsgEmpty           bool
 	MsgErr             struct {
 		name string
 		err  error
@@ -90,10 +91,14 @@ type ResultDisplayItem struct {
 }
 
 type TuiModel struct {
-	selection             bool
-	isSelected            bool
+	hasConsent            bool
+	hasSelectedConsent    bool
+	hddIndex              int
+	hddList               []string
+	hasSelectedHDD        bool
 	isDone                bool
 	workFunc              func(ps *models.ProcessStatus)
+	isWorking             bool
 	workErr               MsgErr
 	hashProgressBar       progress.Model
 	updateProgressBar     progress.Model
@@ -110,8 +115,9 @@ func NewTUI(appVersion string, workFunc func(ps *models.ProcessStatus)) TuiModel
 		updateProgressBar: progress.New(progress.WithGradient("#34C8FF", brightColor)),
 		progressStatus:    &models.ProcessStatus{},
 		workErr:           MsgErr{},
+		hddList:           []string{"HDD", "SSD"},
 		footerText: footerStyle.Render(
-			"Hashimg " + appVersion + " - Press q or ctrl+c to quit",
+			"Hashimg " + appVersion + " - Press Esc or Ctrl+C to quit",
 		),
 	}
 }
@@ -123,7 +129,10 @@ func (m TuiModel) Init() tea.Cmd {
 func (m TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		return m.handleKeys(msg)
+		switch msg.String() {
+		case "esc", "ctrl+c":
+			return m, tea.Quit
+		}
 
 	case tea.WindowSizeMsg:
 		pSize := maxProgressWidth - leftMargin
@@ -132,8 +141,105 @@ func (m TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.hashProgressBar.Width = pSize
 		m.updateProgressBar.Width = pSize
-		return m, nil
+	}
 
+	if !m.hasSelectedConsent {
+		return m.updateConsentSelection(msg)
+	}
+
+	if !m.hasSelectedHDD {
+		return m.updateHDDSelection(msg)
+	}
+
+	if !m.isWorking {
+		m.isWorking = true
+		go m.workFunc(m.progressStatus)
+		return m, m.pollUpdates()
+	}
+
+	return m.updateProgress(msg)
+}
+
+func (m TuiModel) View() string {
+	if m.hasSelectedConsent && !m.hasConsent {
+		return m.viewCancel()
+	}
+
+	if m.workErr.err != nil {
+		return m.viewErr(m.workErr)
+	}
+
+	if !m.hasSelectedConsent {
+		return m.viewSelection()
+	}
+
+	if m.hasConsent && !m.hasSelectedHDD {
+		return m.viewHardDriveSelection()
+	}
+
+	if m.hasConsent && !m.isDone {
+		return m.viewProgress()
+	}
+
+	if m.isDone {
+		return m.viewResults()
+	}
+
+	return "Oops, something went wrong"
+}
+
+func (m TuiModel) updateConsentSelection(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "up", "k":
+			m.hasConsent = false
+
+		case "down", "j":
+			m.hasConsent = true
+
+		case "enter":
+			m.hasSelectedConsent = true
+			if !m.hasConsent {
+				return m, tea.Quit
+			}
+			return m, func() tea.Msg {
+				return MsgEmpty(true)
+			}
+		}
+	}
+	return m, nil
+}
+
+func (m TuiModel) updateHDDSelection(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "up", "k":
+			m.hddIndex--
+			if m.hddIndex < 0 {
+				m.hddIndex = 0
+			}
+
+		case "down", "j":
+			m.hddIndex++
+			listLen := len(m.hddList)
+			if m.hddIndex >= listLen {
+				m.hddIndex = listLen - 1
+			}
+
+		case "enter":
+			m.hasSelectedHDD = true
+			return m, func() tea.Msg {
+				return MsgEmpty(true)
+			}
+		}
+	}
+	return m, nil
+}
+
+func (m TuiModel) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
 	case MsgHashProgress:
 		progressBy := 100 / float64(msg.MaxHashProgress)
 		m.hashProgressPercent = progressBy / 100 * float64(msg.HashProgress)
@@ -163,51 +269,6 @@ func (m TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	default:
 		return m, nil
 	}
-}
-
-func (m TuiModel) View() string {
-	if m.workErr.err != nil {
-		return m.viewErr(m.workErr)
-	}
-
-	if !m.isSelected {
-		return m.viewSelection()
-	}
-
-	if m.selection && !m.isDone {
-		return m.viewProgress()
-	}
-
-	if m.isDone {
-		return m.viewResults()
-	}
-
-	return m.viewCancel()
-}
-
-func (m TuiModel) handleKeys(keyMsg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch keyMsg.String() {
-	case "ctrl+c", "q":
-		return m, tea.Quit
-
-	case "up", "k":
-		m.selection = false
-		return m, nil
-
-	case "down", "j":
-		m.selection = true
-		return m, nil
-
-	case "enter":
-		m.isSelected = true
-		if m.selection {
-			go m.workFunc(m.progressStatus)
-			return m, m.pollUpdates()
-		}
-		return m, nil
-	}
-
-	return m, nil
 }
 
 func (m TuiModel) pollUpdates() tea.Cmd {
@@ -246,7 +307,7 @@ func (m TuiModel) pollUpdates() tea.Cmd {
 
 func (m TuiModel) viewSelection() string {
 	s := "\n" + headerStyle.Render("Would you like to process this directory?") + "\n\n"
-	if !m.selection {
+	if !m.hasConsent {
 		s += noStyle.Render("> No") + "\n"
 		s += baseStyle.Render("  Yes")
 	} else {
@@ -254,6 +315,19 @@ func (m TuiModel) viewSelection() string {
 		s += brightStyle.Render("> Yes")
 	}
 	s += "\n\n" + m.footerText + "\n"
+	return s
+}
+
+func (m TuiModel) viewHardDriveSelection() string {
+	s := "\n" + headerStyle.Render("What kind of hard drive are your files on?") + "\n\n"
+	for i, hd := range m.hddList {
+		if m.hddIndex == i {
+			s += brightStyle.Render("> "+hd) + "\n"
+		} else {
+			s += baseStyle.Render("  "+hd) + "\n"
+		}
+	}
+	s += "\n" + m.footerText + "\n"
 	return s
 }
 

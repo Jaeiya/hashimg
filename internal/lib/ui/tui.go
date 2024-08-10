@@ -192,9 +192,11 @@ func (m TuiModel) handleKeys(keyMsg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "up", "k":
 		m.selection = false
+		return m, nil
 
 	case "down", "j":
 		m.selection = true
+		return m, nil
 
 	case "enter":
 		m.isSelected = true

@@ -204,7 +204,7 @@ func (m TuiModel) handleKeys(keyMsg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			go m.workFunc(m.progressStatus)
 			return m, m.pollUpdates()
 		}
-		return m, tea.Quit
+		return m, nil
 	}
 
 	return m, nil

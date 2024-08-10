@@ -11,7 +11,7 @@ import (
 	"github.com/jaeiya/go-template/internal/lib/ui"
 )
 
-const appVersion = "1.0.2"
+const appVersion = "1.1"
 
 func main() {
 	wd, _ := os.Getwd()

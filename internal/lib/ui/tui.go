@@ -97,7 +97,7 @@ type TuiModel struct {
 	hddList               []string
 	hasSelectedHDD        bool
 	isDone                bool
-	workFunc              func(ps *models.ProcessStatus)
+	workFunc              func(ps *models.ProcessStatus, useAvgBufferSize bool)
 	isWorking             bool
 	workErr               MsgErr
 	hashProgressBar       progress.Model
@@ -108,7 +108,10 @@ type TuiModel struct {
 	footerText            string
 }
 
-func NewTUI(appVersion string, workFunc func(ps *models.ProcessStatus)) TuiModel {
+func NewTUI(
+	appVersion string,
+	workFunc func(ps *models.ProcessStatus, useAvgBufferSize bool),
+) TuiModel {
 	return TuiModel{
 		workFunc:          workFunc,
 		hashProgressBar:   progress.New(progress.WithGradient("#34C8FF", brightColor)),
@@ -152,8 +155,12 @@ func (m TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	if !m.isWorking {
+		isHDD := false
+		if m.hddList[m.hddIndex] == "HDD" {
+			isHDD = true
+		}
 		m.isWorking = true
-		go m.workFunc(m.progressStatus)
+		go m.workFunc(m.progressStatus, isHDD)
 		return m, m.pollUpdates()
 	}
 

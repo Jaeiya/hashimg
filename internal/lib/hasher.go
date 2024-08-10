@@ -42,7 +42,8 @@ type HasherConfig struct {
 	// Container for hash results
 	HashResult *HashResult
 	// Should be a unique string
-	Prefix string
+	Prefix     string
+	BufferSize int64
 }
 
 type Hasher struct {
@@ -51,6 +52,7 @@ type Hasher struct {
 	hashLen    int
 	hashResult *HashResult
 	prefix     string
+	bufferSize int64
 }
 
 /*
@@ -86,6 +88,7 @@ func NewHasher(c HasherConfig) (*Hasher, error) {
 		hashLen:    c.Length,
 		hashResult: c.HashResult,
 		prefix:     c.Prefix,
+		bufferSize: c.BufferSize,
 	}, nil
 }
 
@@ -127,7 +130,12 @@ func (h *Hasher) computeHash(filePath string) (string, error) {
 		return "", err
 	}
 	defer file.Close()
-	buf := bufio.NewReader(file)
+	var buf *bufio.Reader
+	if h.bufferSize > 0 {
+		buf = bufio.NewReaderSize(file, int(h.bufferSize))
+	} else {
+		buf = bufio.NewReader(file)
+	}
 
 	sha := sha256.New()
 	if _, err := io.Copy(sha, buf); err != nil {

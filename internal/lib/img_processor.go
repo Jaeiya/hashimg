@@ -31,7 +31,7 @@ func NewImageProcessor(
 	return ImageProcessor{hashPrefix, imageMap, ps, time.Now()}
 }
 
-func (ip ImageProcessor) Process(dir string, hashLen int) error {
+func (ip ImageProcessor) Process(dir string, hashLen int, useAvgBufferSize bool) error {
 	start := time.Now()
 	mapLen := len(ip.imageMap)
 	ip.processStatus.MaxHashProgress = int32(mapLen)
@@ -46,6 +46,14 @@ func (ip ImageProcessor) Process(dir string, hashLen int) error {
 	}
 
 	hi := HashResult{}
+	var bufferSize int64
+	if useAvgBufferSize {
+		avgBytes, err := getAvgFileSize(dir)
+		if err != nil {
+			return err
+		}
+		bufferSize = avgBytes
+	}
 
 	hasher, err := NewHasher(HasherConfig{
 		Length:     hashLen,
@@ -53,6 +61,7 @@ func (ip ImageProcessor) Process(dir string, hashLen int) error {
 		QueueSize:  queueSize,
 		HashResult: &hi,
 		Prefix:     ip.hashPrefix,
+		BufferSize: bufferSize,
 	})
 	if err != nil {
 		return err
@@ -163,4 +172,22 @@ func verifyHashResult(hr HashResult) error {
 	}
 
 	return nil
+}
+
+func getAvgFileSize(dir string) (int64, error) {
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		return 0, err
+	}
+
+	var totalSize int64 = 0
+	for _, entry := range files {
+		info, err := entry.Info()
+		if err != nil {
+			return 0, err
+		}
+		totalSize += info.Size()
+	}
+
+	return totalSize / int64(len(files)), nil
 }

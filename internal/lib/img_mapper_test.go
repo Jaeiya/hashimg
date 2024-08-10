@@ -28,7 +28,7 @@ func TestImageMapper(t *testing.T) {
 		a := assert.New(t)
 		dir := t.TempDir()
 		_, err := MapImages(filepath.Join(dir), hashPrefix)
-		a.ErrorContains(err, "empty directory: ")
+		a.ErrorIs(err, ErrNoImages)
 	})
 
 	t.Run("should error if no image files found", func(t *testing.T) {

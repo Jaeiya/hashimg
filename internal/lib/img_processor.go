@@ -1,7 +1,6 @@
 package lib
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	fPath "path/filepath"
@@ -13,8 +12,6 @@ import (
 	"github.com/jaeiya/go-template/internal/lib/models"
 	"github.com/jaeiya/go-template/internal/lib/utils"
 )
-
-var ErrNoImages = errors.New("no images found in directory")
 
 type ImageProcessor struct {
 	hashPrefix       string

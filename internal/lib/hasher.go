@@ -49,10 +49,7 @@ type HasherConfig struct {
 type Hasher struct {
 	mux        sync.Mutex
 	threadPool *utils.ThreadPool
-	hashLen    int
-	hashResult *HashResult
-	prefix     string
-	bufferSize int64
+	cfg        HasherConfig
 }
 
 /*
@@ -61,34 +58,31 @@ NewHasher creates a Hasher which takes a HasherConfig.
 🟡 The HashConfig.Prefix should be a unique string, because it identifies
 which images have been renamed.
 */
-func NewHasher(c HasherConfig) (*Hasher, error) {
-	if len(c.Prefix) < 3 {
+func NewHasher(cfg HasherConfig) (*Hasher, error) {
+	if len(cfg.Prefix) < 3 {
 		return nil, ErrHashPrefixTooShort
 	}
 
-	if c.HashResult == nil {
+	if cfg.HashResult == nil {
 		return nil, ErrHashInfoNil
 	}
 
-	if c.HashResult.oldHashes == nil {
-		c.HashResult.oldHashes = make(map[string]HashInfo)
+	if cfg.HashResult.oldHashes == nil {
+		cfg.HashResult.oldHashes = make(map[string]HashInfo)
 	}
 
-	if c.Length < 10 {
+	if cfg.Length < 10 {
 		return nil, ErrHashLengthTooShort
 	}
 
-	tp, err := utils.NewThreadPool(c.Threads, c.QueueSize, false)
+	tp, err := utils.NewThreadPool(cfg.Threads, cfg.QueueSize, false)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Hasher{
 		threadPool: tp,
-		hashLen:    c.Length,
-		hashResult: c.HashResult,
-		prefix:     c.Prefix,
-		bufferSize: c.BufferSize,
+		cfg:        cfg,
 	}, nil
 }
 
@@ -103,7 +97,7 @@ func (h *Hasher) Hash(
 
 		if cs == Cached {
 			ext := fPath.Ext(fileName)
-			hi.hash = strings.TrimPrefix(fileName[0:len(fileName)-len(ext)], h.prefix)
+			hi.hash = strings.TrimPrefix(fileName[0:len(fileName)-len(ext)], h.cfg.Prefix)
 			hi.cached = true
 		} else {
 			hi.hash, hi.err = h.computeHash(filePath)
@@ -111,9 +105,9 @@ func (h *Hasher) Hash(
 
 		h.mux.Lock()
 		if cs == Cached {
-			h.hashResult.oldHashes[hi.hash] = hi
+			h.cfg.HashResult.oldHashes[hi.hash] = hi
 		} else {
-			h.hashResult.newHashes = append(h.hashResult.newHashes, hi)
+			h.cfg.HashResult.newHashes = append(h.cfg.HashResult.newHashes, hi)
 		}
 		h.mux.Unlock()
 		callBack(cs)
@@ -131,8 +125,8 @@ func (h *Hasher) computeHash(filePath string) (string, error) {
 	}
 	defer file.Close()
 	var buf *bufio.Reader
-	if h.bufferSize > 0 {
-		buf = bufio.NewReaderSize(file, int(h.bufferSize))
+	if h.cfg.BufferSize > 0 {
+		buf = bufio.NewReaderSize(file, int(h.cfg.BufferSize))
 	} else {
 		buf = bufio.NewReader(file)
 	}
@@ -141,5 +135,5 @@ func (h *Hasher) computeHash(filePath string) (string, error) {
 	if _, err := io.Copy(sha, buf); err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("%x", sha.Sum(nil))[0:h.hashLen], nil
+	return fmt.Sprintf("%x", sha.Sum(nil))[0:h.cfg.Length], nil
 }

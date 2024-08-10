@@ -41,7 +41,8 @@ var (
 	footerStyle = baseStyle.Foreground(lipgloss.Color("#626262"))
 
 	resultsHeaderStyle = brightStyle.
-				Width(40).
+				MarginLeft(3).
+				Width(30).
 				Padding(1, 0).
 				AlignHorizontal(lipgloss.Center).
 				Background(lipgloss.Color("#003284"))
@@ -55,7 +56,7 @@ var (
 
 	resultsLabelStyle = baseStyle.
 				AlignHorizontal(lipgloss.Right).
-				Width(23).
+				Width(16).
 				PaddingRight(1).
 				BorderRight(true).
 				BorderStyle(lipgloss.NormalBorder()).

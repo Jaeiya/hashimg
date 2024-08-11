@@ -140,7 +140,7 @@ func NewTUI(
 			"SSD - Solid State Drive (Flash)",
 		},
 		footerText: footerStyle.Render(
-			"Hashimg " + appVersion + " - Press Esc or Ctrl+C to quit",
+			"Hashimg " + appVersion + " - Press Esc, Ctrl+C, or Q to quit",
 		),
 	}
 }
@@ -153,7 +153,7 @@ func (m TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "esc", "ctrl+c":
+		case "esc", "ctrl+c", "q":
 			return m, tea.Quit
 		}
 

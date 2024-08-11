@@ -48,11 +48,12 @@ var (
 	brightColor = "#A8FF00"
 	darkColor   = "#626262"
 	whiteColor  = "#DBEFFF"
+	redColor    = "#FF71CB"
 
 	baseStyle = lipgloss.NewStyle().MarginLeft(leftMargin)
 
 	headerStyle = baseStyle.Width(60).Bold(true).Foreground(lipgloss.Color("#34C8FF"))
-	noStyle     = baseStyle.Bold(true).Foreground(lipgloss.Color("#FFA31F"))
+	noStyle     = baseStyle.Bold(true).Foreground(lipgloss.Color(redColor))
 	brightStyle = baseStyle.Bold(true).Foreground(lipgloss.Color(brightColor))
 	footerStyle = baseStyle.Foreground(lipgloss.Color(darkColor))
 
@@ -67,7 +68,7 @@ var (
 				Width(40).
 				Padding(1, 2).
 				AlignHorizontal(lipgloss.Center).
-				Foreground(lipgloss.Color("#FF71CB")).
+				Foreground(lipgloss.Color(redColor)).
 				Background(lipgloss.Color(CautionBackColor))
 
 	resultsLabelStyle = baseStyle.

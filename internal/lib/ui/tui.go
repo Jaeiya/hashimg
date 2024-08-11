@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -16,6 +17,18 @@ const (
 	leftMargin       = 4
 	maxProgressWidth = 60
 	pollPerMilli     = 60
+
+	hddSelectionText = "For performance reasons, selecting the kind of hard drive" +
+		" your images are stored on, will allow the program to optimize itself.\n\n" +
+		"In some cases, this can speed up the process from 10 seconds, to only taking" +
+		" 6 seconds.\n\n" +
+		"The more images you have, the more seconds you'll save. If you have less than" +
+		" 100 images, you probably won't notice much difference between the two options."
+
+	welcomeConsentText = "Welcome to Hashimg!\n\n" +
+		"All images in the current working directory, will be compared for duplicates and" +
+		" renamed to their truncated 32-character sha256 hash.\n\n" +
+		"Renaming the images ensures that only new images will need to be fully processed."
 )
 
 var (
@@ -33,12 +46,15 @@ var (
 
 	borderColor = "#818C95"
 	brightColor = "#A8FF00"
-	baseStyle   = lipgloss.NewStyle().MarginLeft(leftMargin)
+	darkColor   = "#626262"
+	whiteColor  = "#DBEFFF"
 
-	headerStyle = baseStyle.Bold(true).Foreground(lipgloss.Color("#34C8FF"))
+	baseStyle = lipgloss.NewStyle().MarginLeft(leftMargin)
+
+	headerStyle = baseStyle.Width(60).Bold(true).Foreground(lipgloss.Color("#34C8FF"))
 	noStyle     = baseStyle.Bold(true).Foreground(lipgloss.Color("#FFA31F"))
 	brightStyle = baseStyle.Bold(true).Foreground(lipgloss.Color(brightColor))
-	footerStyle = baseStyle.Foreground(lipgloss.Color("#626262"))
+	footerStyle = baseStyle.Foreground(lipgloss.Color(darkColor))
 
 	resultsHeaderStyle = brightStyle.
 				MarginLeft(3).
@@ -61,7 +77,7 @@ var (
 				BorderRight(true).
 				BorderStyle(lipgloss.NormalBorder()).
 				BorderForeground(lipgloss.Color(borderColor)).
-				Foreground(lipgloss.Color("#DBEFFF"))
+				Foreground(lipgloss.Color(whiteColor))
 
 	resultsTImagesStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#34C8FF"))
 	resultsValueStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#00FFD2"))
@@ -317,7 +333,10 @@ func (m TuiModel) pollUpdates() tea.Cmd {
 }
 
 func (m TuiModel) viewSelection() string {
-	s := "\n" + headerStyle.Render("Would you like to process this directory?") + "\n\n"
+	s := "\n" + headerStyle.Render(welcomeConsentText) + "\n\n"
+	s += baseStyle.Foreground(lipgloss.Color(whiteColor)).
+		Render("Would you like to continue?") +
+		"\n\n"
 	if !m.hasConsent {
 		s += noStyle.Render("> No") + "\n"
 		s += baseStyle.Render("  Yes")
@@ -330,7 +349,19 @@ func (m TuiModel) viewSelection() string {
 }
 
 func (m TuiModel) viewHardDriveSelection() string {
-	s := "\n" + headerStyle.Render("What kind of hard drive are your files on?") + "\n\n"
+	wd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	s := "\n" + headerStyle.Render(hddSelectionText) + "\n\n"
+
+	driveStr := lipgloss.NewStyle().
+		Foreground(lipgloss.Color(brightColor)).
+		Render(wd[:3])
+
+	s += baseStyle.Foreground(lipgloss.Color(whiteColor)).
+		Render("Which type of drive is your "+driveStr+" drive?") + "\n\n"
+
 	for i, hd := range m.hddList {
 		if m.hddIndex == i {
 			s += brightStyle.Render("> "+hd) + "\n"

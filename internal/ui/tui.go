@@ -14,6 +14,15 @@ import (
 )
 
 const (
+	CautionForeColor = "#FFF10E"
+	CautionBackColor = "#131313"
+
+	borderColor = "#818C95"
+	brightColor = "#A8FF00"
+	darkColor   = "#626262"
+	whiteColor  = "#DBEFFF"
+	redColor    = "#FF71CB"
+
 	leftMargin       = 4
 	maxProgressWidth = 60
 	pollPerMilli     = 60
@@ -32,9 +41,6 @@ const (
 )
 
 var (
-	CautionForeColor = "#FFF10E"
-	CautionBackColor = "#131313"
-
 	CautionStyle = baseStyle.
 			Width(40).
 			AlignHorizontal(lipgloss.Center).
@@ -43,12 +49,6 @@ var (
 			Padding(1, 2).
 			Background(lipgloss.Color(CautionBackColor)).
 			Foreground(lipgloss.Color(CautionForeColor))
-
-	borderColor = "#818C95"
-	brightColor = "#A8FF00"
-	darkColor   = "#626262"
-	whiteColor  = "#DBEFFF"
-	redColor    = "#FF71CB"
 
 	baseStyle = lipgloss.NewStyle().MarginLeft(leftMargin)
 

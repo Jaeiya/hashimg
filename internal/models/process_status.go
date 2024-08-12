@@ -14,7 +14,7 @@ type ProcessStatus struct {
 	HashProgress int32
 	// Progress of renaming and/or removing files
 	UpdateProgress int32
-	// The total amount of hashes that are to be processed
+	// The total amount of image hashes that are to be processed
 	MaxHashProgress int32
 	// The total amount of renames and removals to be processed
 	MaxUpdateProgress int32

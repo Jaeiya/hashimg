@@ -7,8 +7,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jaeiya/go-template/internal/lib"
-	"github.com/jaeiya/go-template/internal/lib/models"
-	"github.com/jaeiya/go-template/internal/lib/ui"
+	"github.com/jaeiya/go-template/internal/models"
+	"github.com/jaeiya/go-template/internal/ui"
 )
 
 const appVersion = "1.2.0"

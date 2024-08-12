@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/jaeiya/go-template/internal/lib/utils"
+	"github.com/jaeiya/go-template/internal/utils"
 )
 
 var (

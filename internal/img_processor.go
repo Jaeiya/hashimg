@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jaeiya/go-template/internal/lib/models"
-	"github.com/jaeiya/go-template/internal/lib/utils"
+	"github.com/jaeiya/go-template/internal/models"
+	"github.com/jaeiya/go-template/internal/utils"
 )
 
 type ImageProcessor struct {

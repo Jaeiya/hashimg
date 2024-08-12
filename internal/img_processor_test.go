@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/jaeiya/go-template/internal/lib/models"
+	"github.com/jaeiya/go-template/internal/models"
 	"github.com/stretchr/testify/assert"
 )
 

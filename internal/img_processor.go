@@ -20,6 +20,11 @@ type ImageProcessor struct {
 	processStartTime time.Time
 }
 
+type FilteredImages struct {
+	imagePathMap   map[string]string
+	dupeImagePaths []string
+}
+
 func NewImageProcessor(
 	hashPrefix string,
 	imageMap ImageMap,
@@ -29,41 +34,58 @@ func NewImageProcessor(
 }
 
 func (ip ImageProcessor) Process(dir string, hashLen int, useAvgBufferSize bool) error {
-	mapLen := len(ip.imageMap)
-	ip.processStatus.MaxHashProgress = int32(mapLen)
-	ip.processStatus.TotalImages = int32(mapLen)
-	if mapLen == 0 {
+	if len(ip.imageMap) == 0 {
 		return ErrNoImages
 	}
 
-	queueSize := mapLen
-	if queueSize < 10 {
-		queueSize = 10
+	ip.processStatus.TotalImages = int32(len(ip.imageMap))
+	ip.processStatus.MaxHashProgress = ip.processStatus.TotalImages
+
+	bufferSize, err := ip.calcBufferSize(dir, useAvgBufferSize)
+	if err != nil {
+		return err
 	}
 
-	analyzeStart := time.Now()
-	var bufferSize int64
-	if useAvgBufferSize {
-		avgBytes, err := getAvgFileSize(dir)
-		if err != nil {
-			return err
-		}
-		bufferSize = avgBytes
-		ip.processStatus.AnalyzeTook = time.Since(analyzeStart)
+	hashResult, err := ip.hashImages(dir, hashLen, bufferSize)
+	if err != nil {
+		return err
 	}
 
+	fi := ip.filterImages(hashResult)
+
+	return ip.updateImages(fi)
+}
+
+func (ip ImageProcessor) calcBufferSize(dir string, useAvgBufferSize bool) (int64, error) {
+	if !useAvgBufferSize {
+		return 0, nil
+	}
 	start := time.Now()
+	avgBytes, err := getAvgFileSize(dir)
+	ip.processStatus.AnalyzeTook = time.Since(start)
+	return avgBytes, err
+}
+
+func (ip ImageProcessor) hashImages(
+	dir string,
+	hashLen int,
+	bufferSize int64,
+) (HashResult, error) {
+	start := time.Now()
+	defer func() { ip.processStatus.HashingTook = time.Since(start) }()
+
 	hr := HashResult{}
+
 	hasher, err := NewHasher(HasherConfig{
 		Length:     hashLen,
 		Threads:    runtime.NumCPU(),
-		QueueSize:  queueSize,
+		QueueSize:  max(len(ip.imageMap), 10),
 		HashResult: &hr,
 		Prefix:     ip.hashPrefix,
 		BufferSize: bufferSize,
 	})
 	if err != nil {
-		return err
+		return hr, err
 	}
 
 	for fileName, cacheStatus := range ip.imageMap {
@@ -76,40 +98,65 @@ func (ip ImageProcessor) Process(dir string, hashLen int, useAvgBufferSize bool)
 	}
 
 	hasher.Wait()
-	ip.processStatus.HashingTook = time.Since(start)
-	hashErr := verifyHashResult(hr)
-	if hashErr != nil {
+
+	if hashErr := verifyHashResult(hr); hashErr != nil {
 		ip.processStatus.HashErr = hashErr
-		return hashErr
+		return hr, hashErr
 	}
-	start = time.Now()
-	fi := &FilteredImages{}
-	imgFilter := NewImageFilter()
-	imgFilter.Filter(hr, fi)
-	ip.processStatus.FilterTook = time.Since(start)
-	return ip.updateImages(*fi)
+
+	return hr, nil
+}
+
+func (ip ImageProcessor) filterImages(hr HashResult) FilteredImages {
+	start := time.Now()
+	defer func() { ip.processStatus.FilterTook = time.Since(start) }()
+
+	imagePathMap := map[string]string{}
+	dupeImagePaths := []string{}
+
+	for _, hashInfo := range hr.newHashes {
+		if hashInfo.err != nil {
+			fmt.Println(hashInfo.err)
+			continue
+		}
+
+		_, isOldDupe := hr.oldHashes[hashInfo.hash]
+		_, isNewDupe := imagePathMap[hashInfo.hash]
+
+		if isOldDupe || isNewDupe {
+			dupeImagePaths = append(dupeImagePaths, hashInfo.path)
+			continue
+		}
+
+		imagePathMap[hashInfo.hash] = hashInfo.path
+	}
+
+	return FilteredImages{
+		imagePathMap:   imagePathMap,
+		dupeImagePaths: dupeImagePaths,
+	}
 }
 
 func (ip ImageProcessor) updateImages(fi FilteredImages) error {
 	start := time.Now()
-
-	dupeLen := len(fi.dupeImagePaths)
-	renameLen := len(fi.imagePathMap)
-	if dupeLen == 0 && renameLen == 0 {
+	defer func() {
+		ip.processStatus.UpdatingTook = time.Since(start)
 		ip.processStatus.TotalTime = time.Since(ip.processStartTime)
+	}()
+
+	if len(fi.dupeImagePaths) == 0 && len(fi.imagePathMap) == 0 {
 		return nil
 	}
 
-	ip.processStatus.DupeImages = int32(dupeLen)
-	ip.processStatus.NewImages = int32(renameLen)
-	workLen := len(fi.dupeImagePaths) + len(fi.imagePathMap)
-	ip.processStatus.MaxUpdateProgress = int32(workLen)
-	queueSize := workLen
-	if queueSize < 10 {
-		queueSize = 10
-	}
+	ip.processStatus.DupeImages = int32(len(fi.dupeImagePaths))
+	ip.processStatus.NewImages = int32(len(fi.imagePathMap))
+	ip.processStatus.MaxUpdateProgress = int32(len(fi.dupeImagePaths) + len(fi.imagePathMap))
 
-	tp, err := utils.NewThreadPool(runtime.NumCPU(), queueSize, false)
+	tp, err := utils.NewThreadPool(
+		runtime.NumCPU(),
+		max(len(fi.dupeImagePaths)+len(fi.imagePathMap), 10),
+		false,
+	)
 	if err != nil {
 		return err
 	}
@@ -148,8 +195,6 @@ func (ip ImageProcessor) updateImages(fi FilteredImages) error {
 	}
 
 	tp.Wait()
-	ip.processStatus.UpdatingTook = time.Since(start)
-	ip.processStatus.TotalTime = time.Since(ip.processStartTime)
 
 	if len(errors) > 0 {
 		return fmt.Errorf("update errors: %v", errors)
@@ -189,4 +234,11 @@ func getAvgFileSize(dir string) (int64, error) {
 	}
 
 	return totalSize / int64(len(files)), nil
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }

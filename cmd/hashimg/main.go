@@ -6,7 +6,7 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/jaeiya/go-template/internal/lib"
+	"github.com/jaeiya/go-template/internal"
 	"github.com/jaeiya/go-template/internal/models"
 	"github.com/jaeiya/go-template/internal/ui"
 )
@@ -16,9 +16,9 @@ const appVersion = "1.2.0"
 func main() {
 	wd, _ := os.Getwd()
 	hashPrefix := "0x@"
-	iMap, err := lib.MapImages(wd, hashPrefix)
+	iMap, err := internal.MapImages(wd, hashPrefix)
 	if err != nil {
-		if errors.Is(err, lib.ErrNoImages) {
+		if errors.Is(err, internal.ErrNoImages) {
 			fmt.Println(ui.CautionStyle.Render("No images found in current directory"))
 			os.Exit(0)
 			return
@@ -27,7 +27,7 @@ func main() {
 	}
 
 	workFunc := func(ps *models.ProcessStatus, useAvgBufferSize bool) {
-		imgProcessor := lib.NewImageProcessor(hashPrefix, iMap, ps)
+		imgProcessor := internal.NewImageProcessor(hashPrefix, iMap, ps)
 		// Errors are handled inside TUI
 		_ = imgProcessor.Process(wd, 32, useAvgBufferSize)
 	}

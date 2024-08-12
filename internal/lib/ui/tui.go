@@ -108,6 +108,8 @@ type ResultDisplayItem struct {
 	valueStyle lipgloss.Style
 }
 
+type WorkFunc = func(ps *models.ProcessStatus, useAvgBufferSize bool)
+
 type TuiModel struct {
 	hasConsent            bool
 	hasSelectedConsent    bool
@@ -126,10 +128,7 @@ type TuiModel struct {
 	footerText            string
 }
 
-func NewTUI(
-	appVersion string,
-	workFunc func(ps *models.ProcessStatus, useAvgBufferSize bool),
-) TuiModel {
+func NewTUI(appVersion string, workFunc WorkFunc) TuiModel {
 	return TuiModel{
 		workFunc:          workFunc,
 		hashProgressBar:   progress.New(progress.WithGradient("#34C8FF", brightColor)),
@@ -200,22 +199,18 @@ func (m TuiModel) View() string {
 	}
 
 	if !m.hasSelectedConsent {
-		return m.viewSelection()
+		return m.viewConsentSelection()
 	}
 
 	if m.hasConsent && !m.hasSelectedHDD {
 		return m.viewHardDriveSelection()
 	}
 
-	if m.hasConsent && !m.isDone {
+	if !m.isDone {
 		return m.viewProgress()
 	}
 
-	if m.isDone {
-		return m.viewResults()
-	}
-
-	return "Oops, something went wrong"
+	return m.viewResults()
 }
 
 func (m TuiModel) updateConsentSelection(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -335,7 +330,7 @@ func (m TuiModel) pollUpdates() tea.Cmd {
 	})
 }
 
-func (m TuiModel) viewSelection() string {
+func (m TuiModel) viewConsentSelection() string {
 	s := "\n" + headerStyle.Render(welcomeConsentText) + "\n\n"
 	s += baseStyle.Foreground(lipgloss.Color(whiteColor)).
 		Render("Would you like to continue?") +
@@ -443,7 +438,7 @@ func (m TuiModel) viewErr(e MsgErr) string {
 	s := "\n" + errorHeaderStyle.Render("Error Occurred During "+e.name) + "\n\n"
 
 	s += baseStyle.Width(60).
-		Foreground(lipgloss.Color("#E3F7FF")).
+		Foreground(lipgloss.Color(whiteColor)).
 		Render(fmt.Sprintf("%s", e.err)) +
 		"\n"
 	return s

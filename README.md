@@ -18,9 +18,10 @@ The hash I'm using to compare the files is only 32 out of 64 characters. I didn'
 Now, even though I've truncated the hash to 32 characters, the probability of an accidental collision on 1
 billion images is `1 in 2^64` or `1 in 18.4 Quintillion`.
 
-Those odds are what we can consider a "virtual impossibility" and therefore there should be no issue
-running this program for your personal images. If you're a company storing significantly more than
-1 billion images, then probably safe to assume this app is not for that use-case 😜
+Those odds are what we call a "virtual impossibility." Unless you're working with significantly more
+than 1 billion images, you won't have to worry about collisions. In most cases, you'll probably have
+folders named based on date, theme, or event...in which case if you ever **were** to accumulate
+significantly more than a billion images, they likely wouldn't all be in a single folder.
 
 ### Installing
 

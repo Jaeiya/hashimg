@@ -15,7 +15,7 @@
 
 </p>
 
-## About Hashimg
+## Hashimg
 
 A quaint little hobby utility that I created for the hoard of random images I have in folders. It
 reads all images within a folder (**not** including sub-folders) and compares them to one another.

@@ -40,23 +40,19 @@ images in a folder, then this program is perfect.
 ### Installing
 
 You can download this app in multiple flavors (platforms) from the [Releases] page. It supports Windows,
-Linux, and MacOS. If you're using a modern processor, you can use the `v2` and `v3` versions. You may
-or may not get better performance when using those, but ultimately it will be negligible.
+Linux, and MacOS. If you're using a modern processor, you can use the `v2` or `v3` versions. You may
+or may not get better performance when using those, but it will likely be negligible.
 
-Once you download the version for your Operating system, you can either run it in whatever folder
-you've extracted it in, but if you want it to be more useful, you'll probably want to set it up in your
-`PATH` environment variable, which is talked about a little more below.
+After you download the version you want, you can extract it to any folder you like and execute it
+from a terminal pointing at that directory. The best way to use this application is to set it up in
+your global `PATH` environment variable; that way it can be accessed from any folder in your terminal.
 
 ### Build Instructions
 
-You can download the source and build this for either Windows or Linux, using their respective build
-scripts `build.bat` (for Windows) or `build.sh` (for Linux). They will both build a `hashimg.exe`
-to the `/bin` folder.
+You'll need to have Go `1.22.5` or higher installed.
 
-If you want `hashimg.exe` to be accessible from any directory in your terminal, then you'll have to
-move the program to a path that's already part of your `PATH` environment variable, or add a new
-path to it that points to the location of `hashimg.exe`. There are many tutorials on how to do this
-so you should be able to quickly search for it and find what you're looking for.
+You can download the source and build this for either Windows or Linux, using their respective build
+scripts `build.bat` (for Windows) or `build.sh` (for Linux). They will both build to `/bin/hashimg.exe`.
 
 ### Expectations
 

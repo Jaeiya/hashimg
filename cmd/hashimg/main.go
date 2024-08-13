@@ -11,7 +11,7 @@ import (
 	"github.com/jaeiya/hashimg/internal/ui"
 )
 
-const appVersion = "1.2.1"
+const appVersion = "1.2.2"
 
 func main() {
 	wd, _ := os.Getwd()

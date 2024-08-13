@@ -11,7 +11,7 @@
    <a href="https://github.com/Jaeiya/hashimg/actions"><img src="https://img.shields.io/github/actions/workflow/status/jaeiya/hashimg/release.yml"></a>
    <a href="https://github.com/Jaeiya/hashimg/releases"><img src="https://img.shields.io/github/v/release/jaeiya/hashimg"></a>
    <a href="#"><img src="https://img.shields.io/github/go-mod/go-version/jaeiya/hashimg"></a>
-   <a href="https://wakatime.com/projects/hashimg"><img src="https://wakatime.com/badge/user/92eac300-9535-4747-a2e0-0cfb5d345c51/project/bb183dcc-4615-42c1-95f8-2395c879c3e3.svg"></a>
+   <a href="https://wakatime.com/projects/hashimg?branches=on%2Cdev"><img src="https://wakatime.com/badge/user/92eac300-9535-4747-a2e0-0cfb5d345c51/project/bb183dcc-4615-42c1-95f8-2395c879c3e3.svg"></a>
 
 </p>
 

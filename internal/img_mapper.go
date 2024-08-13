@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	fPath "path/filepath"
@@ -14,8 +13,6 @@ const (
 	ExtEnabled  ImgExtStatus = true
 	ExtDisabled ImgExtStatus = false
 )
-
-var ErrNoImages = errors.New("no images found in directory")
 
 var imageExtensions = ImageExtMap{
 	".jpg":  ExtEnabled,

@@ -3,7 +3,6 @@ package internal
 import (
 	"bufio"
 	"crypto/sha256"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -12,12 +11,6 @@ import (
 	"sync"
 
 	"github.com/jaeiya/hashimg/internal/utils"
-)
-
-var (
-	ErrHashPrefixTooShort = errors.New("hash prefix must be at least 3 characters")
-	ErrHashInfoNil        = errors.New("hash info is nil; it must be initialized")
-	ErrHashLengthTooShort = errors.New("hash length must be at least 10 characters")
 )
 
 type HashResult struct {

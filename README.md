@@ -1,13 +1,19 @@
-# Hashimg
-
 <p align="center">
-<i>Hashimg removes duplicate images and renames them for faster future scans.</i>
+<b>Hashimg,</b> <i>removes duplicate images and renames them for faster future scans.</i>
 </p>
+
 <p align="center">
    <img src="https://github.com/Jaeiya/hashimg/blob/1c5b3435dfede011f2f28e0f5d3d2907e1928e8d/demo/hashimg_demo.gif" alt="demo">
 </p>
 
-## About
+<p align="center">
+   <a href="https://goreportcard.com/report/github.com/jaeiya/hashimg"><img src="https://goreportcard.com/badge/github.com/jaeiya/hashimg"></a>
+   <a href="https://github.com/Jaeiya/hashimg/actions"><img src="https://img.shields.io/github/actions/workflow/status/jaeiya/hashimg/release.yml"></a>
+   <a href="https://github.com/Jaeiya/hashimg/releases"><img src="https://img.shields.io/github/v/release/jaeiya/hashimg"></a>
+   <a href="#"><img src="https://img.shields.io/github/go-mod/go-version/jaeiya/hashimg"></a>
+</p>
+
+## About Hashimg
 
 A quaint little hobby utility that I created for the hoard of random images I have in folders. It
 reads all images within a folder (**not** including sub-folders) and compares them to one another.

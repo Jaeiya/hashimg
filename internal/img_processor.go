@@ -130,11 +130,6 @@ func (ip ImageProcessor) filterImages(hr HashResult) FilteredImages {
 	dupeImagePaths := []string{}
 
 	for _, hashInfo := range hr.newHashes {
-		if hashInfo.err != nil {
-			fmt.Println(hashInfo.err)
-			continue
-		}
-
 		_, isOldDupe := hr.oldHashes[hashInfo.hash]
 		_, isNewDupe := imagePathMap[hashInfo.hash]
 

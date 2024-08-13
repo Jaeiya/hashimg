@@ -34,10 +34,10 @@ significantly more than a billion images, they likely wouldn't all be in a singl
 ### Accuracy
 
 As long as an image file has exactly the same dimensions and data as another image, it will be found
-to be a duplicate. This means that images which have the same _visual_ appearance, can't necessarily
-be distinguished by the program. If you have two images that are _visually_ identical, but one is
-larger than the other, there's no way for the program to know that they're identical because their
-**data** is not identical.
+to be a duplicate. This means that images which have the same _visual_ appearance, will **not**
+necessarily be distinguished by the program. If you have two images that are _visually_ identical,
+but one is larger than the other, there's no way for the program to know that they're identical
+because their **data** is not identical.
 
 So while it may be virtually impossible to get false positives (flagging images that are dupes, but are
 not), it will **literally** be impossible to find duplicates among only the _visually_ identical, if

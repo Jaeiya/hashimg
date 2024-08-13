@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/jaeiya/go-template/internal/utils"
+	"github.com/jaeiya/hashimg/internal/utils"
 )
 
 var (

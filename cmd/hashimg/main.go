@@ -6,9 +6,9 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/jaeiya/go-template/internal"
-	"github.com/jaeiya/go-template/internal/models"
-	"github.com/jaeiya/go-template/internal/ui"
+	"github.com/jaeiya/hashimg/internal"
+	"github.com/jaeiya/hashimg/internal/models"
+	"github.com/jaeiya/hashimg/internal/ui"
 )
 
 const appVersion = "1.2.1"

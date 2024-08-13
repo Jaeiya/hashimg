@@ -1,4 +1,4 @@
-module github.com/jaeiya/go-template
+module github.com/jaeiya/hashimg
 
 go 1.22.5
 

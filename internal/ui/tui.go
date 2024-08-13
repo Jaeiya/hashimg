@@ -155,6 +155,7 @@ func (m TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "esc", "ctrl+c", "q":
 			// Quitting is the same as revoking consent
+			m.hasSelectedConsent = true
 			m.hasConsent = false
 			return m, tea.Quit
 		}

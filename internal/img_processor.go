@@ -60,10 +60,25 @@ func (ip ImageProcessor) calcBufferSize(dir string, useAvgBufferSize bool) (int6
 	if !useAvgBufferSize {
 		return 0, nil
 	}
+
 	start := time.Now()
-	avgBytes, err := getAvgFileSize(dir)
-	ip.processStatus.AnalyzeTook = time.Since(start)
-	return avgBytes, err
+	defer func() { ip.processStatus.AnalyzeTook = time.Since(start) }()
+
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		return 0, err
+	}
+
+	var totalSize int64
+	for _, entry := range files {
+		info, err := entry.Info()
+		if err != nil {
+			return 0, err
+		}
+		totalSize += info.Size()
+	}
+
+	return totalSize / int64(len(files)), err
 }
 
 func (ip ImageProcessor) hashImages(
@@ -216,24 +231,6 @@ func verifyHashResult(hr HashResult) error {
 	}
 
 	return nil
-}
-
-func getAvgFileSize(dir string) (int64, error) {
-	files, err := os.ReadDir(dir)
-	if err != nil {
-		return 0, err
-	}
-
-	var totalSize int64 = 0
-	for _, entry := range files {
-		info, err := entry.Info()
-		if err != nil {
-			return 0, err
-		}
-		totalSize += info.Size()
-	}
-
-	return totalSize / int64(len(files)), nil
 }
 
 func max(a, b int) int {

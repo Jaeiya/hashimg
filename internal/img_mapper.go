@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"fmt"
 	"os"
 	fPath "path/filepath"
 	"strings"
@@ -60,7 +59,7 @@ func MapImages(dir, hashPrefix string) (ImageMap, error) {
 	}
 
 	if len(iMap) == 0 {
-		return nil, fmt.Errorf("no images found in: %s", dir)
+		return nil, ErrNoImages
 	}
 
 	return iMap, nil

@@ -38,7 +38,7 @@ func TestImageMapper(t *testing.T) {
 		err := writeFiles(dir, []string{"test1.txt", "test2.mp3"}, []string{"test1", "test2"})
 		a.NoError(err)
 		_, err = MapImages(filepath.Join(dir), hashPrefix)
-		a.ErrorContains(err, "no images found in: ")
+		a.ErrorIs(err, ErrNoImages)
 	})
 
 	mockTable := []MockMapperTest{

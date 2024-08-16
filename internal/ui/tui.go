@@ -12,8 +12,6 @@ import (
 )
 
 const (
-	leftMargin       = 4
-	maxProgressWidth = 60
 	pollPerMilli     = 60
 )
 

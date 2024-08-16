@@ -12,6 +12,9 @@ import (
 )
 
 const (
+	leftMargin       = 4
+	maxProgressWidth = 60
+
 	CautionForeColor = "#FFF10E"
 	CautionBackColor = "#131313"
 

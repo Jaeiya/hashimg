@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"fmt"
 	"os"
 	fPath "path/filepath"
 	"runtime"
@@ -43,17 +42,24 @@ func (ip ImageProcessor) Process(dir string, hashLen int, useAvgBufferSize bool)
 
 	bufferSize, err := ip.calcBufferSize(dir, useAvgBufferSize)
 	if err != nil {
+		ip.processStatus.HashErr = err
 		return err
 	}
 
 	hashResult, err := ip.hashImages(dir, hashLen, bufferSize)
 	if err != nil {
+		ip.processStatus.HashErr = err
 		return err
 	}
 
 	fi := ip.filterImages(hashResult)
 
-	return ip.updateImages(fi)
+	if err := ip.updateImages(fi); err != nil {
+		ip.processStatus.UpdateErr = err
+		return err
+	}
+
+	return nil
 }
 
 func (ip ImageProcessor) calcBufferSize(dir string, useAvgBufferSize bool) (int64, error) {
@@ -115,7 +121,6 @@ func (ip ImageProcessor) hashImages(
 	hasher.Wait()
 
 	if hashErr := verifyHashResult(hr); hashErr != nil {
-		ip.processStatus.HashErr = hashErr
 		return hr, hashErr
 	}
 
@@ -180,7 +185,6 @@ func (ip ImageProcessor) updateImages(fi FilteredImages) error {
 			if err != nil {
 				mux.Lock()
 				errors = append(errors, err)
-				ip.processStatus.UpdateErr = err
 				mux.Unlock()
 			}
 			ip.processStatus.IncUpdateProgress()
@@ -197,7 +201,6 @@ func (ip ImageProcessor) updateImages(fi FilteredImages) error {
 			if err != nil {
 				mux.Lock()
 				errors = append(errors, err)
-				ip.processStatus.UpdateErr = err
 				mux.Unlock()
 			}
 			ip.processStatus.IncUpdateProgress()
@@ -207,7 +210,7 @@ func (ip ImageProcessor) updateImages(fi FilteredImages) error {
 	tp.Wait()
 
 	if len(errors) > 0 {
-		return fmt.Errorf("update errors: %v", errors)
+		return errors[0]
 	}
 	return nil
 }

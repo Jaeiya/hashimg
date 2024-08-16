@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	pollPerMilli     = 60
+	pollingRateMilli = 60
 )
 
 const (
@@ -264,7 +264,7 @@ func (m TuiModel) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m TuiModel) pollProgressStatus() tea.Cmd {
-	return tea.Tick(time.Millisecond*pollPerMilli, func(t time.Time) tea.Msg {
+	return tea.Tick(time.Millisecond*pollingRateMilli, func(t time.Time) tea.Msg {
 		if m.progressStatus.HashErr != nil {
 			return ProgressHashErr
 		}

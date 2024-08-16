@@ -21,7 +21,6 @@ changelog:
   use: github
   filters:
     exclude:
-      - "^chore"
       - "^tdd"
       - "^test"
   groups:
@@ -34,6 +33,9 @@ changelog:
     - title: "Docs"
       regexp: "^docs:.+$|^docs\\(.+\\):.+$"
       order: 300
+    - title: "Maintenance"
+      regexp: "^clean:.+$|^clean\\(.+\\):.+$|^chore:.+$|^chore\\(.+\\):.+$"
+      order: 400
     - title: "Changes"
       order: 999
 

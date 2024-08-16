@@ -16,6 +16,27 @@ builds:
       - v2
       - v3
 
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^chore"
+      - "^tdd"
+      - "^test"
+  groups:
+    - title: New
+      regexp: "^feat:.+$|^feat\\(.+\\):.+$"
+      order: 100
+    - title: "Fixes"
+      regexp: "^fix:.+$|^fix\\(.+\\):.+$"
+      order: 200
+    - title: "Docs"
+      regexp: "^docs:.+$|^docs\\(.+\\):.+$"
+      order: 300
+    - title: "Changes"
+      order: 999
+
 archives:
   - format_overrides:
       - goos: windows

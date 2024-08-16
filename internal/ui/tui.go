@@ -347,40 +347,32 @@ func (m TuiModel) pollProgressStatus() tea.Cmd {
 	return tea.Tick(time.Millisecond*pollPerMilli, func(t time.Time) tea.Msg {
 		if m.progressStatus.HashErr != nil {
 			return ProgressHashErr
-			// return MsgErr{"Hashing", m.progressStatus.HashErr}
 		}
 
 		if m.progressStatus.UpdateErr != nil {
 			return ProgressUpdateErr
-			// return MsgErr{"Updating", m.progressStatus.UpdateErr}
 		}
 
 		if m.progressStatus.HashProgress != m.progressStatus.MaxHashProgress {
 			return ProgressHash
-			// return MsgHashProgress(m.progressStatus)
 		}
 
 		if m.hashProgressPercent != 1 {
 			return ProgressHashComplete
-			// return MsgHashCompleted(true)
 		}
 
 		if m.progressStatus.UpdateProgress != m.progressStatus.MaxUpdateProgress {
 			return ProgressUpdate
-			// return MsgUpdateProgress(m.progressStatus)
 		}
 
 		if m.updateProgressPercent != 1 {
 			return ProgressUpdateComplete
-			// return MsgUpdateCompleted(true)
 		}
 
 		if m.updateProgressPercent == 1 {
 			return ProgressDone
-			// return MsgDone(true)
 		}
 
-		// return m.progressStatus
 		panic("tried to send empty progress state")
 	})
 }

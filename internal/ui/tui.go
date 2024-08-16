@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -38,6 +39,28 @@ const (
 		"All images in the current working directory, will be compared for duplicates and" +
 		" renamed to their truncated 32-character sha256 hash.\n\n" +
 		"Renaming the images ensures that only new images will need to be fully processed."
+)
+
+const (
+	StateWelcome State = iota
+	StateConsentSelection
+	StateHDDSelection
+	StateDoWork
+	StateProgressing
+	StateResults
+	StateError
+	StateDone
+	StateAbort
+)
+
+const (
+	ProgressHash ProgressState = iota
+	ProgressHashComplete
+	ProgressUpdate
+	ProgressUpdateComplete
+	ProgressHashErr
+	ProgressUpdateErr
+	ProgressDone
 )
 
 var (
@@ -90,6 +113,9 @@ var (
 )
 
 type (
+	State         int
+	ProgressState int
+
 	MsgHashProgress    *models.ProcessStatus
 	MsgUpdateProgress  *models.ProcessStatus
 	MsgHashCompleted   bool
@@ -100,6 +126,7 @@ type (
 		name string
 		err  error
 	}
+	MsgTest string
 )
 
 type ResultDisplayItem struct {
@@ -108,17 +135,17 @@ type ResultDisplayItem struct {
 	valueStyle lipgloss.Style
 }
 
-type WorkFunc = func(ps *models.ProcessStatus, useAvgBufferSize bool)
+type WorkFunc = func(ps *models.ProcessStatus, useAvgBufferSize bool) error
 
 type TuiModel struct {
+	count                 int
+	state                 State
+	progressState         ProgressState
 	hasConsent            bool
-	hasSelectedConsent    bool
 	hddIndex              int
 	hddList               []string
-	hasSelectedHDD        bool
-	isDone                bool
-	workFunc              func(ps *models.ProcessStatus, useAvgBufferSize bool)
-	isWorking             bool
+	isHDD                 bool
+	workFunc              WorkFunc
 	workErr               MsgErr
 	hashProgressBar       progress.Model
 	updateProgressBar     progress.Model
@@ -130,6 +157,7 @@ type TuiModel struct {
 
 func NewTUI(appVersion string, workFunc WorkFunc) TuiModel {
 	return TuiModel{
+		state:             StateConsentSelection,
 		workFunc:          workFunc,
 		hashProgressBar:   progress.New(progress.WithGradient("#34C8FF", brightColor)),
 		updateProgressBar: progress.New(progress.WithGradient("#34C8FF", brightColor)),
@@ -154,10 +182,7 @@ func (m TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "esc", "ctrl+c", "q":
-			// Quitting is the same as revoking consent
-			m.hasSelectedConsent = true
-			m.hasConsent = false
-			return m, tea.Quit
+			m.state = StateAbort
 		}
 
 	case tea.WindowSizeMsg:
@@ -169,49 +194,55 @@ func (m TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.updateProgressBar.Width = pSize
 	}
 
-	if !m.hasSelectedConsent {
+	switch m.state {
+
+	case StateAbort:
+		return m, tea.Quit
+
+	case StateConsentSelection:
 		return m.updateConsentSelection(msg)
-	}
 
-	if !m.hasSelectedHDD {
+	case StateHDDSelection:
 		return m.updateHDDSelection(msg)
-	}
 
-	if !m.isWorking {
-		isHDD := false
-		if m.hddList[m.hddIndex] == "HDD" {
-			isHDD = true
-		}
-		m.isWorking = true
-		go m.workFunc(m.progressStatus, isHDD)
-		return m, m.pollUpdates()
-	}
+	case StateDoWork:
+		m.state = StateProgressing
+		go m.workFunc(m.progressStatus, m.isHDD)
+		return m, m.pollProgressStatus()
 
-	return m.updateProgress(msg)
+	case StateProgressing:
+		return m.updateProgress(msg)
+
+	default:
+		panic(fmt.Sprintf("unknown state: %d", m.state))
+
+	}
 }
 
 func (m TuiModel) View() string {
-	if m.hasSelectedConsent && !m.hasConsent {
-		return m.viewCancel()
-	}
+	switch m.state {
 
-	if m.workErr.err != nil {
+	case StateAbort:
+		return m.viewAbort()
+
+	case StateError:
 		return m.viewErr(m.workErr)
-	}
 
-	if !m.hasSelectedConsent {
+	case StateConsentSelection:
 		return m.viewConsentSelection()
-	}
 
-	if m.hasConsent && !m.hasSelectedHDD {
+	case StateHDDSelection:
 		return m.viewHardDriveSelection()
-	}
 
-	if !m.isDone {
+	case StateDoWork, StateProgressing:
 		return m.viewProgress()
+
+	case StateResults:
+		return m.viewResults()
+
 	}
 
-	return m.viewResults()
+	panic("missing view")
 }
 
 func (m TuiModel) updateConsentSelection(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -225,13 +256,12 @@ func (m TuiModel) updateConsentSelection(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.hasConsent = true
 
 		case "enter":
-			m.hasSelectedConsent = true
 			if !m.hasConsent {
-				return m, tea.Quit
+				m.state = StateAbort
+				return m.Update(msg)
 			}
-			return m, func() tea.Msg {
-				return MsgEmpty(true)
-			}
+			m.state = StateHDDSelection
+			return m, nil
 		}
 	}
 	return m, nil
@@ -255,79 +285,103 @@ func (m TuiModel) updateHDDSelection(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case "enter":
-			m.hasSelectedHDD = true
-			return m, func() tea.Msg {
-				return MsgEmpty(true)
-			}
+			m.state = StateDoWork
+			m.isHDD = m.hddIndex == 0
+			return m.Update(msg)
 		}
 	}
 	return m, nil
 }
 
 func (m TuiModel) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case MsgHashProgress:
-		progressBy := 100 / float64(msg.MaxHashProgress)
-		m.hashProgressPercent = progressBy / 100 * float64(msg.HashProgress)
-		return m, m.pollUpdates()
+	switch msg.(type) {
+	case ProgressState:
+		switch msg {
 
-	case MsgUpdateProgress:
-		progressBy := 100 / float64(msg.MaxUpdateProgress)
-		m.updateProgressPercent = progressBy / 100 * float64(msg.UpdateProgress)
-		return m, m.pollUpdates()
+		case ProgressHash:
+			progressBy := 100 / float64(m.progressStatus.MaxHashProgress)
+			m.hashProgressPercent = progressBy / 100 * float64(m.progressStatus.HashProgress)
+			return m, m.pollProgressStatus()
 
-	case MsgUpdateCompleted:
-		m.updateProgressPercent = 1
-		return m, m.pollUpdates()
+		case ProgressHashComplete:
+			m.hashProgressPercent = 1
+			return m, m.pollProgressStatus()
 
-	case MsgHashCompleted:
-		m.hashProgressPercent = 1
-		return m, m.pollUpdates()
+		case ProgressUpdate:
+			progressBy := 100 / float64(m.progressStatus.MaxUpdateProgress)
+			m.updateProgressPercent = progressBy / 100 * float64(m.progressStatus.UpdateProgress)
+			return m, m.pollProgressStatus()
 
-	case MsgErr:
-		m.workErr = msg
-		return m, tea.Quit
+		case ProgressUpdateComplete:
+			m.updateProgressPercent = 1
+			return m, m.pollProgressStatus()
 
-	case MsgDone:
-		m.isDone = true
-		return m, tea.Quit
+		case ProgressHashErr:
+			m.state = StateError
+			m.workErr.name = "Hashing"
+			m.workErr.err = m.progressStatus.HashErr
+			return m, tea.Quit
+
+		case ProgressUpdateErr:
+			m.state = StateError
+			m.workErr.name = "Updating"
+			m.workErr.err = m.progressStatus.UpdateErr
+			return m, tea.Quit
+
+		case ProgressDone:
+			m.state = StateResults
+			return m, tea.Quit
+
+		default:
+			panic(fmt.Sprintf("missing progress state: %d", msg))
+
+		}
 
 	default:
-		return m, nil
+		panic(fmt.Sprintf("invalid type for progress update: %s", reflect.TypeOf(msg).Name()))
+
 	}
 }
 
-func (m TuiModel) pollUpdates() tea.Cmd {
+func (m TuiModel) pollProgressStatus() tea.Cmd {
 	return tea.Tick(time.Millisecond*pollPerMilli, func(t time.Time) tea.Msg {
 		if m.progressStatus.HashErr != nil {
-			return MsgErr{"Hashing", m.progressStatus.HashErr}
+			return ProgressHashErr
+			// return MsgErr{"Hashing", m.progressStatus.HashErr}
 		}
 
 		if m.progressStatus.UpdateErr != nil {
-			return MsgErr{"Updating", m.progressStatus.UpdateErr}
+			return ProgressUpdateErr
+			// return MsgErr{"Updating", m.progressStatus.UpdateErr}
 		}
 
 		if m.progressStatus.HashProgress != m.progressStatus.MaxHashProgress {
-			return MsgHashProgress(m.progressStatus)
+			return ProgressHash
+			// return MsgHashProgress(m.progressStatus)
 		}
 
 		if m.hashProgressPercent != 1 {
-			return MsgHashCompleted(true)
+			return ProgressHashComplete
+			// return MsgHashCompleted(true)
 		}
 
 		if m.progressStatus.UpdateProgress != m.progressStatus.MaxUpdateProgress {
-			return MsgUpdateProgress(m.progressStatus)
+			return ProgressUpdate
+			// return MsgUpdateProgress(m.progressStatus)
 		}
 
 		if m.updateProgressPercent != 1 {
-			return MsgUpdateCompleted(true)
+			return ProgressUpdateComplete
+			// return MsgUpdateCompleted(true)
 		}
 
 		if m.updateProgressPercent == 1 {
-			return MsgDone(true)
+			return ProgressDone
+			// return MsgDone(true)
 		}
 
-		return m.progressStatus
+		// return m.progressStatus
+		panic("tried to send empty progress state")
 	})
 }
 
@@ -390,7 +444,7 @@ func (m TuiModel) viewProgress() string {
 		s += "\n" + margin + m.updateProgressBar.ViewAs(m.updateProgressPercent) + "\n"
 	}
 
-	s += "\n\n" + m.footerText + "\n"
+	s += fmt.Sprintf("\n\n%s %d\n", m.footerText, m.count)
 
 	return s
 }
@@ -445,7 +499,7 @@ func (m TuiModel) viewErr(e MsgErr) string {
 	return s
 }
 
-func (m TuiModel) viewCancel() string {
+func (m TuiModel) viewAbort() string {
 	s := CautionStyle.Render("Aborted by User") + "\n"
 	return s
 }

@@ -26,10 +26,9 @@ func main() {
 		panic(err)
 	}
 
-	workFunc := func(ps *models.ProcessStatus, useAvgBufferSize bool) {
+	workFunc := func(ps *models.ProcessStatus, useAvgBufferSize bool) error {
 		imgProcessor := internal.NewImageProcessor(hashPrefix, iMap, ps)
-		// Errors are handled inside TUI
-		_ = imgProcessor.Process(wd, 32, useAvgBufferSize)
+		return imgProcessor.Process(wd, 32, useAvgBufferSize)
 	}
 
 	tui := ui.NewTUI(appVersion, workFunc)

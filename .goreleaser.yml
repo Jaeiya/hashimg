@@ -25,19 +25,19 @@ changelog:
       - "^test"
   groups:
     - title: New
-      regexp: '^feat(\([[:word:]]+\))??!?:.+$'
+      regexp: "^.*feat[(\\w)]*:+.*$"
       order: 100
     - title: "Fixes"
-      regexp: '^fix(\([[:word:]]+\))??!?:.+$'
+      regexp: "^.*fix[(\\w)]*:+.*$"
       order: 200
     - title: "Docs"
-      regexp: '^docs(\([[:word:]]+\))??!?:.+$'
+      regexp: "^.*docs[(\\w)]*:+.*$"
       order: 300
     - title: "Maintenance"
-      regexp: '^chore(\([[:word:]]+\))??!?:.+$'
+      regexp: "^.*chore[(\\w)]*:+.*$"
       order: 400
     - title: "Cleaning"
-      regexp: '^clean(\([[:word:]]+\))??!?:.+$'
+      regexp: "^.*clean[(\\w)]*:+.*$"
     - title: "Changes"
       order: 999
 

@@ -11,8 +11,6 @@ import (
 	"github.com/jaeiya/hashimg/internal/ui"
 )
 
-const appVersion = "1.2.4"
-
 func main() {
 	wd, _ := os.Getwd()
 	hashPrefix := "0x@"
@@ -31,7 +29,7 @@ func main() {
 		return imgProcessor.Process(wd, 32, useAvgBufferSize)
 	}
 
-	tui := ui.NewTUI(appVersion, workFunc)
+	tui := ui.NewTUI(workFunc)
 
 	if _, err := tea.NewProgram(tui).Run(); err != nil {
 		fmt.Println("Error running program:", err)

@@ -84,7 +84,7 @@ func (ip ImageProcessor) calcBufferSize(dir string, useAvgBufferSize bool) (int6
 		totalSize += info.Size()
 	}
 
-	return totalSize / int64(len(files)), err
+	return totalSize / int64(len(files)), nil
 }
 
 func (ip ImageProcessor) hashImages(

@@ -24,17 +24,17 @@ const (
 	whiteColor  = "#DBEFFF"
 	redColor    = "#FF71CB"
 
+	welcomeConsentText = "Welcome to Hashimg!\n\n" +
+		"All images in the current working directory, will be compared for duplicates and" +
+		" renamed to their truncated 32-character sha256 hash.\n\n" +
+		"Renaming the images ensures that only new images will need to be fully processed."
+
 	hddSelectionText = "For performance reasons, selecting the kind of hard drive" +
 		" your images are stored on, will allow the program to optimize itself.\n\n" +
 		"In some cases, this can speed up the process from 10 seconds, to only taking" +
 		" 6 seconds.\n\n" +
 		"The more images you have, the more seconds you'll save. If you have less than" +
 		" 100 images, you probably won't notice much difference between the two options."
-
-	welcomeConsentText = "Welcome to Hashimg!\n\n" +
-		"All images in the current working directory, will be compared for duplicates and" +
-		" renamed to their truncated 32-character sha256 hash.\n\n" +
-		"Renaming the images ensures that only new images will need to be fully processed."
 )
 
 var (

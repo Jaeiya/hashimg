@@ -117,6 +117,7 @@ func (h *Hasher) computeHash(filePath string) (string, error) {
 		return "", err
 	}
 	defer file.Close()
+
 	var buf *bufio.Reader
 	if h.cfg.BufferSize > 0 {
 		buf = bufio.NewReaderSize(file, int(h.cfg.BufferSize))

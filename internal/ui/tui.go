@@ -40,18 +40,10 @@ const (
 type (
 	State         int
 	ProgressState int
-
-	MsgHashProgress    *models.ProcessStatus
-	MsgUpdateProgress  *models.ProcessStatus
-	MsgHashCompleted   bool
-	MsgUpdateCompleted bool
-	MsgDone            bool
-	MsgEmpty           bool
-	MsgErr             struct {
+	MsgErr        struct {
 		name string
 		err  error
 	}
-	MsgTest string
 )
 
 type ResultDisplayItem struct {

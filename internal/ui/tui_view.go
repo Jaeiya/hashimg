@@ -35,9 +35,21 @@ const (
 		" 6 seconds.\n\n" +
 		"The more images you have, the more seconds you'll save. If you have less than" +
 		" 100 images, you probably won't notice much difference between the two options."
+
+	reviewSelectionText = "If you would like, you can review the duplicate images before" +
+		" they are deleted. A separate folder will be opened for you to review them."
+
+	userReviewSelectionText = "I've opened a folder containing the duplicate images." +
+		" Images with the same hash name are considered identical. When you're done" +
+		" reviewing the images, you can decide to keep or delete them below."
 )
 
 var (
+	driveTextList = []string{
+		"HDD - Hard Disk Drive (Noisy)",
+		"SSD - Solid State Drive (Flash)",
+	}
+
 	footerText = footerStyle.Render(
 		"Hashimg " + utils.AppVersion + " - Press Esc, Ctrl+C, or Q to quit",
 	)
@@ -91,19 +103,11 @@ var (
 )
 
 func (m TuiModel) viewConsentSelection() string {
-	s := "\n" + headerStyle.Render(welcomeConsentText) + "\n\n"
-	s += baseStyle.Foreground(lipgloss.Color(whiteColor)).
-		Render("Would you like to continue?") +
-		"\n\n"
-	if !m.hasConsent {
-		s += noStyle.Render("> No") + "\n"
-		s += baseStyle.Render("  Yes")
-	} else {
-		s += baseStyle.Render("  No") + "\n"
-		s += brightStyle.Render("> Yes")
-	}
-	s += "\n\n" + footerText + "\n"
-	return s
+	return viewYesNo(
+		"Would you like to continue?",
+		welcomeConsentText,
+		func() bool { return m.hasConsent },
+	)
 }
 
 func (m TuiModel) viewHardDriveSelection() string {
@@ -120,7 +124,7 @@ func (m TuiModel) viewHardDriveSelection() string {
 	s += baseStyle.Foreground(lipgloss.Color(whiteColor)).
 		Render("Which type of drive is your "+driveStr+" drive?") + "\n\n"
 
-	for i, hd := range m.hddList {
+	for i, hd := range driveTextList {
 		if m.hddIndex == i {
 			s += brightStyle.Render("> "+hd) + "\n"
 		} else {
@@ -129,6 +133,26 @@ func (m TuiModel) viewHardDriveSelection() string {
 	}
 	s += "\n" + footerText + "\n"
 	return s
+}
+
+func (m TuiModel) viewReviewConsentSelection() string {
+	return viewYesNo(
+		"Would you like to review any duplicate images found?",
+		reviewSelectionText,
+		func() bool {
+			return m.wantsReview
+		},
+	)
+}
+
+func (m TuiModel) viewUserReviewSelection() string {
+	return viewYesNo(
+		"Would you like to keep the duplicate images?",
+		userReviewSelectionText,
+		func() bool {
+			return m.keepDupes
+		},
+	)
 }
 
 func (m TuiModel) viewProgress() string {
@@ -149,30 +173,31 @@ func (m TuiModel) viewProgress() string {
 		s += "\n" + margin + m.updateProgressBar.ViewAs(m.updateProgressPercent) + "\n"
 	}
 
-	s += fmt.Sprintf("\n\n%s %d\n", footerText, m.count)
+	s += fmt.Sprintf("\n\n%s\n", footerText)
 
 	return s
 }
 
 func (m TuiModel) viewResults() string {
 	s := fmt.Sprintf("\n%s\n\n", resultsHeaderStyle.Render("Hashimg Results"))
+	status := m.imgProcessor.Status
 
 	items := []ResultDisplayItem{
-		{"Total Images", strconv.Itoa(int(m.progressStatus.TotalImages)), resultsTImagesStyle},
-		{"Dupes", strconv.Itoa(int(m.progressStatus.DupeImages)), resultsDupeStyle},
-		{"Cached", strconv.Itoa(int(m.progressStatus.CachedImages)), resultsCacheStyle},
-		{"New", strconv.Itoa(int(m.progressStatus.NewImages)), resultsNewStyle},
+		{"Total Images", strconv.Itoa(int(status.TotalImageCount)), resultsTImagesStyle},
+		{"Dupes", strconv.Itoa(int(status.DupeImageCount)), resultsDupeStyle},
+		{"Cached", strconv.Itoa(int(status.CachedImageCount)), resultsCacheStyle},
+		{"New", strconv.Itoa(int(status.NewImageCount)), resultsNewStyle},
 		{"", "", resultsValueStyle},
-		{"Analyze Speed", formatDuration(m.progressStatus.AnalyzeTook), resultsValueStyle},
-		{"Hash Speed", formatDuration(m.progressStatus.HashingTook), resultsValueStyle},
-		{"Filter Speed", formatDuration(m.progressStatus.FilterTook), resultsValueStyle},
+		{"Analyze Speed", formatDuration(status.AnalyzeTook), resultsValueStyle},
+		{"Hash Speed", formatDuration(status.HashingTook), resultsValueStyle},
+		{"Filter Speed", formatDuration(status.FilterTook), resultsValueStyle},
 		{
 			"Update Speed",
-			formatDuration(m.progressStatus.UpdatingTook),
+			formatDuration(status.UpdatingTook),
 			resultsValueStyle,
 		},
 		{"", "", resultsValueStyle},
-		{"Total Time", formatDuration(m.progressStatus.TotalTime), resultsTTimeStyle},
+		{"Total Time", formatDuration(m.imgProcessor.ProcessTime), resultsTTimeStyle},
 	}
 
 	for _, item := range items {
@@ -206,6 +231,25 @@ func (m TuiModel) viewErr(e MsgErr) string {
 
 func (m TuiModel) viewAbort() string {
 	s := CautionStyle.Render("Aborted by User") + "\n"
+	return s
+}
+
+func viewYesNo(question string, header string, isYes func() bool) string {
+	s := ""
+	if len(header) > 0 {
+		s += "\n" + headerStyle.Render(header) + "\n\n"
+	}
+	s += baseStyle.Foreground(lipgloss.Color(whiteColor)).
+		Render(question) +
+		"\n\n"
+	if !isYes() {
+		s += noStyle.Render("> No") + "\n"
+		s += baseStyle.Render("  Yes")
+	} else {
+		s += baseStyle.Render("  No") + "\n"
+		s += brightStyle.Render("> Yes")
+	}
+	s += "\n\n" + footerText + "\n"
 	return s
 }
 

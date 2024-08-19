@@ -1,8 +1,9 @@
 package internal
 
 import (
+	"fmt"
 	"os"
-	fPath "path/filepath"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -13,64 +14,178 @@ import (
 )
 
 type ImageProcessor struct {
+	Status           *models.ProcessStatus
+	WorkingDir       string
+	HasDupes         bool
+	isReviewProcess  bool
+	dupeReviewFolder string
+	DupeRestorePaths []string
 	hashPrefix       string
+	hashLength       int
 	imageMap         ImageMap
-	processStatus    *models.ProcessStatus
-	processStartTime time.Time
+	ProcessTime      time.Duration
+	FilteredImages   *FilteredImages
+}
+
+type ImageProcessorConfig struct {
+	Prefix           string
+	HashLength       int
+	WorkingDir       string
+	ImageMap         ImageMap
+	DupeReviewFolder string
 }
 
 type FilteredImages struct {
-	imagePathMap   map[string]string
-	dupeImagePaths []string
+	NewHashesMap map[string]HashInfo
+	DupeMap      map[string][]HashInfo
 }
 
-func NewImageProcessor(
-	hashPrefix string,
-	imageMap ImageMap,
-	ps *models.ProcessStatus,
-) ImageProcessor {
-	return ImageProcessor{hashPrefix, imageMap, ps, time.Now()}
+func NewImageProcessor(cfg ImageProcessorConfig) *ImageProcessor {
+	if cfg.DupeReviewFolder == "" {
+		cfg.DupeReviewFolder = "__dupes"
+	}
+	return &ImageProcessor{
+		Status:           &models.ProcessStatus{},
+		WorkingDir:       cfg.WorkingDir,
+		dupeReviewFolder: filepath.Join(cfg.WorkingDir, cfg.DupeReviewFolder),
+		hashPrefix:       cfg.Prefix,
+		hashLength:       cfg.HashLength,
+		imageMap:         cfg.ImageMap,
+		DupeRestorePaths: []string{},
+	}
 }
 
-func (ip ImageProcessor) Process(dir string, hashLen int, useAvgBufferSize bool) error {
+func (ip *ImageProcessor) ProcessAll(useBuffer bool) error {
+	err := ip.ProcessHash(useBuffer)
+	if err != nil {
+		return err
+	}
+	return ip.Update()
+}
+
+func (ip *ImageProcessor) ReviewHashProcess(useBuffer bool) error {
+	err := ip.ProcessHash(useBuffer)
+	if err != nil {
+		return err
+	}
+
+	if !ip.HasDupes {
+		return nil
+	}
+
+	ip.isReviewProcess = true
+	fi := ip.FilteredImages
+
+	err = os.MkdirAll(ip.dupeReviewFolder, os.ModeDir|os.ModeAppend)
+	if err != nil {
+		return err
+	}
+
+	cachedImageCount := 0
+	for _, dupes := range fi.DupeMap {
+		for i, dupe := range dupes {
+			ext := filepath.Ext(dupe.path)
+			reviewFileName := fmt.Sprintf("%s_%d%s", dupe.hash, i+1, ext)
+			err = os.Rename(
+				dupe.path,
+				filepath.Join(ip.dupeReviewFolder, reviewFileName),
+			)
+			if err != nil {
+				return err
+			}
+			// cached images are not "new"
+			if dupe.cached {
+				cachedImageCount += 1
+			}
+			if dupe.isNovel {
+				ip.DupeRestorePaths = append(
+					ip.DupeRestorePaths,
+					filepath.Join(ip.dupeReviewFolder, reviewFileName),
+				)
+				dupe.path = filepath.Join(ip.WorkingDir, reviewFileName)
+				fi.NewHashesMap[dupe.hash] = dupe
+				continue
+			}
+			ip.Status.DupeImageCount += 1
+		}
+	}
+
+	ip.Status.NewImageCount = int32(len(fi.NewHashesMap) - cachedImageCount)
+
+	utils.OpenFolder(ip.dupeReviewFolder)
+
+	return nil
+}
+
+func (ip *ImageProcessor) RestoreFromReview() error {
+	for _, path := range ip.DupeRestorePaths {
+		err := os.Rename(
+			path,
+			filepath.Join(ip.WorkingDir, filepath.Base(path)),
+		)
+		if err != nil {
+			return err
+		}
+	}
+	return os.RemoveAll(ip.dupeReviewFolder)
+}
+
+func (ip *ImageProcessor) ProcessHash(useBuffer bool) error {
+	timeStart := time.Now()
+	defer func() { ip.ProcessTime = time.Since(timeStart) }()
+
 	if len(ip.imageMap) == 0 {
 		return ErrNoImages
 	}
 
-	ip.processStatus.TotalImages = int32(len(ip.imageMap))
-	ip.processStatus.MaxHashProgress = ip.processStatus.TotalImages
+	ip.Status.TotalImageCount = int32(len(ip.imageMap))
+	ip.Status.MaxHashProgress = ip.Status.TotalImageCount
 
-	bufferSize, err := ip.calcBufferSize(dir, useAvgBufferSize)
+	bufferSize, err := ip.calcBufferSize(useBuffer)
 	if err != nil {
-		ip.processStatus.HashErr = err
+		ip.Status.HashErr = err
 		return err
 	}
 
-	hashResult, err := ip.hashImages(dir, hashLen, bufferSize)
+	hashResult, err := ip.hashImages(bufferSize)
 	if err != nil {
-		ip.processStatus.HashErr = err
+		ip.Status.HashErr = err
 		return err
 	}
 
-	fi := ip.filterImages(hashResult)
+	ip.FilteredImages = ip.filterImages(hashResult)
+	return nil
+}
 
-	if err := ip.updateImages(fi); err != nil {
-		ip.processStatus.UpdateErr = err
+func (ip *ImageProcessor) Update() error {
+	timeStart := time.Now()
+	defer func() { ip.ProcessTime = ip.ProcessTime + time.Since(timeStart) }()
+
+	if ip.isReviewProcess {
+		if err := ip.renameOnly(); err != nil {
+			ip.Status.UpdateErr = err
+			return err
+		}
+		return nil
+	}
+
+	if err := ip.deleteAndRename(); err != nil {
+		ip.Status.UpdateErr = err
 		return err
 	}
 
 	return nil
 }
 
-func (ip ImageProcessor) calcBufferSize(dir string, useAvgBufferSize bool) (int64, error) {
-	if !useAvgBufferSize {
+func (ip *ImageProcessor) calcBufferSize(useBuffer bool) (int64, error) {
+	if !useBuffer {
 		return 0, nil
 	}
 
 	start := time.Now()
-	defer func() { ip.processStatus.AnalyzeTook = time.Since(start) }()
+	defer func() { ip.Status.AnalyzeTook = time.Since(start) }()
 
-	files, err := os.ReadDir(dir)
+	files, err := os.ReadDir(ip.WorkingDir)
 	if err != nil {
 		return 0, err
 	}
@@ -87,18 +202,14 @@ func (ip ImageProcessor) calcBufferSize(dir string, useAvgBufferSize bool) (int6
 	return totalSize / int64(len(files)), nil
 }
 
-func (ip ImageProcessor) hashImages(
-	dir string,
-	hashLen int,
-	bufferSize int64,
-) (HashResult, error) {
+func (ip *ImageProcessor) hashImages(bufferSize int64) (HashResult, error) {
 	start := time.Now()
-	defer func() { ip.processStatus.HashingTook = time.Since(start) }()
+	defer func() { ip.Status.HashingTook = time.Since(start) }()
 
 	hr := HashResult{}
 
 	hasher, err := NewHasher(HasherConfig{
-		Length:     hashLen,
+		Length:     ip.hashLength,
 		Threads:    runtime.NumCPU(),
 		QueueSize:  max(len(ip.imageMap), 10),
 		HashResult: &hr,
@@ -110,12 +221,17 @@ func (ip ImageProcessor) hashImages(
 	}
 
 	for fileName, cacheStatus := range ip.imageMap {
-		hasher.Hash(fileName, cacheStatus, fPath.Join(dir, fileName), func(cs CacheStatus) {
-			if cs == Cached {
-				ip.processStatus.IncCachedImages()
-			}
-			ip.processStatus.IncHashProgress()
-		})
+		hasher.Hash(
+			fileName,
+			cacheStatus,
+			filepath.Join(ip.WorkingDir, fileName),
+			func(cs CacheStatus) {
+				if cs == Cached {
+					ip.Status.IncCachedImages()
+				}
+				ip.Status.IncHashProgress()
+			},
+		)
 	}
 
 	hasher.Wait()
@@ -127,49 +243,85 @@ func (ip ImageProcessor) hashImages(
 	return hr, nil
 }
 
-func (ip ImageProcessor) filterImages(hr HashResult) FilteredImages {
+func (ip *ImageProcessor) filterImages(hr HashResult) *FilteredImages {
 	start := time.Now()
-	defer func() { ip.processStatus.FilterTook = time.Since(start) }()
+	defer func() { ip.Status.FilterTook = time.Since(start) }()
 
-	imagePathMap := map[string]string{}
-	dupeImagePaths := []string{}
+	newImagesMap := map[string]HashInfo{}
+	dupeImageMap := map[string][]HashInfo{}
 
-	for _, hashInfo := range hr.newHashes {
-		_, isOldDupe := hr.oldHashes[hashInfo.hash]
-		_, isNewDupe := imagePathMap[hashInfo.hash]
-
-		if isOldDupe || isNewDupe {
-			dupeImagePaths = append(dupeImagePaths, hashInfo.path)
+	for _, hashInfo := range hr.newHashesInfo {
+		if _, isDupe := dupeImageMap[hashInfo.hash]; isDupe {
+			dupeImageMap[hashInfo.hash] = append(dupeImageMap[hashInfo.hash], hashInfo)
+			delete(newImagesMap, hashInfo.hash)
 			continue
 		}
 
-		imagePathMap[hashInfo.hash] = hashInfo.path
+		if oldInfo, isDupe := hr.oldHashesInfo[hashInfo.hash]; isDupe {
+			oldInfo.isNovel = true
+			dupeImageMap[oldInfo.hash] = []HashInfo{oldInfo, hashInfo}
+			delete(newImagesMap, hashInfo.hash)
+			continue
+		}
+
+		if newInfo, isDupe := newImagesMap[hashInfo.hash]; isDupe {
+			newInfo.isNovel = true
+			dupeImageMap[newInfo.hash] = []HashInfo{newInfo, hashInfo}
+			delete(newImagesMap, hashInfo.hash)
+			continue
+		}
+
+		newImagesMap[hashInfo.hash] = hashInfo
 	}
 
-	return FilteredImages{
-		imagePathMap:   imagePathMap,
-		dupeImagePaths: dupeImagePaths,
+	ip.HasDupes = len(dupeImageMap) > 0
+
+	return &FilteredImages{
+		NewHashesMap: newImagesMap,
+		DupeMap:      dupeImageMap,
 	}
 }
 
-func (ip ImageProcessor) updateImages(fi FilteredImages) error {
+func (ip *ImageProcessor) deleteAndRename() error {
+	if ip.isReviewProcess {
+		return fmt.Errorf("you must use renameOnly() when using review process")
+	}
+
+	if ip.FilteredImages == nil {
+		return fmt.Errorf("cannot update images: hashes have not been processed")
+	}
+
 	start := time.Now()
+	fi := ip.FilteredImages
 	defer func() {
-		ip.processStatus.UpdatingTook = time.Since(start)
-		ip.processStatus.TotalTime = time.Since(ip.processStartTime)
+		ip.Status.UpdatingTook = time.Since(start)
 	}()
 
-	if len(fi.dupeImagePaths) == 0 && len(fi.imagePathMap) == 0 {
+	if len(fi.DupeMap) == 0 && len(fi.NewHashesMap) == 0 {
 		return nil
 	}
 
-	ip.processStatus.DupeImages = int32(len(fi.dupeImagePaths))
-	ip.processStatus.NewImages = int32(len(fi.imagePathMap))
-	ip.processStatus.MaxUpdateProgress = int32(len(fi.dupeImagePaths) + len(fi.imagePathMap))
+	for _, dupes := range fi.DupeMap {
+		for i, dupe := range dupes {
+			if dupe.cached {
+				continue
+			}
+			// Save all novel images
+			if dupe.isNovel {
+				fi.DupeMap[dupe.hash] = dupes[i+1:]
+				fi.NewHashesMap[dupe.hash] = dupe
+				continue
+			}
+			ip.Status.DupeImageCount += 1
+		}
+	}
+
+	ip.Status.NewImageCount = int32(len(fi.NewHashesMap))
+	ip.Status.MaxUpdateProgress = ip.Status.DupeImageCount + int32(len(fi.NewHashesMap))
 
 	tp, err := utils.NewThreadPool(
 		runtime.NumCPU(),
-		max(len(fi.dupeImagePaths)+len(fi.imagePathMap), 10),
+		max(len(fi.DupeMap)+len(fi.NewHashesMap), 10),
 		false,
 	)
 	if err != nil {
@@ -179,31 +331,36 @@ func (ip ImageProcessor) updateImages(fi FilteredImages) error {
 	errors := []error{}
 	mux := sync.Mutex{}
 
-	for _, imgPath := range fi.dupeImagePaths {
-		tp.Queue(func() {
-			err := os.Remove(imgPath)
-			if err != nil {
-				mux.Lock()
-				errors = append(errors, err)
-				mux.Unlock()
+	for _, dupes := range fi.DupeMap {
+		for _, dupe := range dupes {
+			if dupe.cached {
+				continue
 			}
-			ip.processStatus.IncUpdateProgress()
-		})
+			tp.Queue(func() {
+				err := os.Remove(dupe.path)
+				if err != nil {
+					mux.Lock()
+					errors = append(errors, err)
+					mux.Unlock()
+				}
+				ip.Status.IncUpdateProgress()
+			})
+		}
 	}
 
-	for newImgHash, imgPath := range fi.imagePathMap {
+	for newImgHash, hashInfo := range fi.NewHashesMap {
 		tp.Queue(func() {
-			dir := fPath.Dir(imgPath)
+			dir := filepath.Dir(hashInfo.path)
 			// Uppercase extensions are ugly and inconsistent
-			ext := strings.ToLower(fPath.Ext(imgPath))
-			newFileName := fPath.Join(dir, ip.hashPrefix+newImgHash+ext)
-			err := os.Rename(imgPath, newFileName)
+			ext := strings.ToLower(filepath.Ext(hashInfo.path))
+			newFileName := filepath.Join(dir, ip.hashPrefix+newImgHash+ext)
+			err := os.Rename(hashInfo.path, newFileName)
 			if err != nil {
 				mux.Lock()
 				errors = append(errors, err)
 				mux.Unlock()
 			}
-			ip.processStatus.IncUpdateProgress()
+			ip.Status.IncUpdateProgress()
 		})
 	}
 
@@ -215,14 +372,55 @@ func (ip ImageProcessor) updateImages(fi FilteredImages) error {
 	return nil
 }
 
+func (ip *ImageProcessor) renameOnly() error {
+	fi := ip.FilteredImages
+
+	tp, err := utils.NewThreadPool(
+		runtime.NumCPU(),
+		max(len(fi.DupeMap)+len(fi.NewHashesMap), 10),
+		false,
+	)
+	if err != nil {
+		return err
+	}
+
+	mux := sync.Mutex{}
+	errors := []error{}
+	ip.Status.MaxUpdateProgress = int32(len(fi.NewHashesMap))
+
+	for newImgHash, hashInfo := range fi.NewHashesMap {
+		tp.Queue(func() {
+			dir := filepath.Dir(hashInfo.path)
+			// Uppercase extensions are ugly and inconsistent
+			ext := strings.ToLower(filepath.Ext(hashInfo.path))
+			newFileName := filepath.Join(dir, ip.hashPrefix+newImgHash+ext)
+			err := os.Rename(hashInfo.path, newFileName)
+			if err != nil {
+				mux.Lock()
+				errors = append(errors, err)
+				mux.Unlock()
+			}
+			ip.Status.IncUpdateProgress()
+		})
+	}
+
+	tp.Wait()
+
+	if len(errors) > 0 {
+		return errors[0]
+	}
+
+	return nil
+}
+
 func verifyHashResult(hr HashResult) error {
-	for _, r := range hr.newHashes {
+	for _, r := range hr.newHashesInfo {
 		if r.err != nil {
 			return r.err
 		}
 	}
 
-	for _, r := range hr.oldHashes {
+	for _, r := range hr.oldHashesInfo {
 		if r.err != nil {
 			return r.err
 		}

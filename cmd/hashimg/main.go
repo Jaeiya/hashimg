@@ -7,13 +7,17 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jaeiya/hashimg/internal"
-	"github.com/jaeiya/hashimg/internal/models"
 	"github.com/jaeiya/hashimg/internal/ui"
+)
+
+const (
+	hashPrefix       = "0x@"
+	hashLength       = 32
+	dupeReviewFolder = "__dupes"
 )
 
 func main() {
 	wd, _ := os.Getwd()
-	hashPrefix := "0x@"
 	iMap, err := internal.MapImages(wd, hashPrefix)
 	if err != nil {
 		if errors.Is(err, internal.ErrNoImages) {
@@ -24,12 +28,17 @@ func main() {
 		panic(err)
 	}
 
-	workFunc := func(ps *models.ProcessStatus, useAvgBufferSize bool) error {
-		imgProcessor := internal.NewImageProcessor(hashPrefix, iMap, ps)
-		return imgProcessor.Process(wd, 32, useAvgBufferSize)
-	}
+	imgProcessor := internal.NewImageProcessor(
+		internal.ImageProcessorConfig{
+			WorkingDir:       wd,
+			Prefix:           hashPrefix,
+			ImageMap:         iMap,
+			HashLength:       hashLength,
+			DupeReviewFolder: dupeReviewFolder,
+		},
+	)
 
-	tui := ui.NewTUI(workFunc)
+	tui := ui.NewTUI(imgProcessor)
 
 	if _, err := tea.NewProgram(tui).Run(); err != nil {
 		fmt.Println("Error running program:", err)

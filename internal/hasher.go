@@ -14,15 +14,16 @@ import (
 )
 
 type HashResult struct {
-	newHashes []HashInfo
-	oldHashes map[string]HashInfo
+	newHashesInfo []HashInfo
+	oldHashesInfo map[string]HashInfo
 }
 
 type HashInfo struct {
-	hash   string
-	path   string
-	cached bool
-	err    error
+	isNovel bool
+	hash    string
+	path    string
+	cached  bool
+	err     error
 }
 
 type HasherConfig struct {
@@ -60,8 +61,8 @@ func NewHasher(cfg HasherConfig) (*Hasher, error) {
 		return nil, ErrHashInfoNil
 	}
 
-	if cfg.HashResult.oldHashes == nil {
-		cfg.HashResult.oldHashes = make(map[string]HashInfo)
+	if cfg.HashResult.oldHashesInfo == nil {
+		cfg.HashResult.oldHashesInfo = make(map[string]HashInfo)
 	}
 
 	if cfg.Length < 10 {
@@ -98,9 +99,9 @@ func (h *Hasher) Hash(
 
 		h.mux.Lock()
 		if cs == Cached {
-			h.cfg.HashResult.oldHashes[hi.hash] = hi
+			h.cfg.HashResult.oldHashesInfo[hi.hash] = hi
 		} else {
-			h.cfg.HashResult.newHashes = append(h.cfg.HashResult.newHashes, hi)
+			h.cfg.HashResult.newHashesInfo = append(h.cfg.HashResult.newHashesInfo, hi)
 		}
 		h.mux.Unlock()
 		callBack(cs)

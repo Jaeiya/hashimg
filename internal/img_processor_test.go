@@ -4,7 +4,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/jaeiya/hashimg/internal/models"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -22,8 +21,13 @@ func TestImageProcessor(t *testing.T) {
 		t.Parallel()
 		a := assert.New(t)
 		wd, _ := os.Getwd()
-		imgProcessor := NewImageProcessor(hashPrefix, ImageMap{}, &models.ProcessStatus{})
-		err := imgProcessor.Process(wd, 32, false)
+		imgProcessor := NewImageProcessor(ImageProcessorConfig{
+			WorkingDir: wd,
+			Prefix:     hashPrefix,
+			ImageMap:   ImageMap{},
+			HashLength: 32,
+		})
+		err := imgProcessor.ProcessAll(false)
 		a.ErrorIs(err, ErrNoImages)
 	})
 
@@ -157,8 +161,13 @@ func TestImageProcessor(t *testing.T) {
 			)
 			iMap, err := MapImages(dir, hashPrefix)
 			a.NoError(err)
-			imgProcessor := NewImageProcessor(hashPrefix, iMap, &models.ProcessStatus{})
-			err = imgProcessor.Process(dir, 32, false)
+			imgProcessor := NewImageProcessor(ImageProcessorConfig{
+				WorkingDir: dir,
+				Prefix:     hashPrefix,
+				ImageMap:   iMap,
+				HashLength: 32,
+			})
+			err = imgProcessor.ProcessAll(false)
 			a.NoError(err)
 
 			fileNames, err = readDir(dir)

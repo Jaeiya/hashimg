@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/jaeiya/hashimg/internal/models"
+	"github.com/jaeiya/hashimg/internal"
 )
 
 const (
@@ -19,7 +19,11 @@ const (
 	StateWelcome State = iota
 	StateConsentSelection
 	StateHDDSelection
-	StateDoWork
+	StateReviewConsentSelection
+	StateUserReview
+	StateDoAllWork
+	StateDoHashWork
+	StateDoUpdateWork
 	StateProgressing
 	StateResults
 	StateError
@@ -52,36 +56,28 @@ type ResultDisplayItem struct {
 	valueStyle lipgloss.Style
 }
 
-type WorkFunc = func(ps *models.ProcessStatus, useAvgBufferSize bool) error
-
 type TuiModel struct {
-	count                 int
 	state                 State
 	hasConsent            bool
+	wantsReview           bool
+	keepDupes             bool
 	hddIndex              int
-	hddList               []string
 	isHDD                 bool
-	workFunc              WorkFunc
+	imgProcessor          *internal.ImageProcessor
 	workErr               MsgErr
 	hashProgressBar       progress.Model
 	updateProgressBar     progress.Model
 	hashProgressPercent   float64
 	updateProgressPercent float64
-	progressStatus        *models.ProcessStatus
 }
 
-func NewTUI(workFunc WorkFunc) TuiModel {
+func NewTUI(ip *internal.ImageProcessor) TuiModel {
 	return TuiModel{
 		state:             StateConsentSelection,
-		workFunc:          workFunc,
 		hashProgressBar:   progress.New(progress.WithGradient("#34C8FF", brightColor)),
 		updateProgressBar: progress.New(progress.WithGradient("#34C8FF", brightColor)),
-		progressStatus:    &models.ProcessStatus{},
 		workErr:           MsgErr{},
-		hddList: []string{
-			"HDD - Hard Disk Drive (Noisy)",
-			"SSD - Solid State Drive (Flash)",
-		},
+		imgProcessor:      ip,
 	}
 }
 
@@ -108,7 +104,7 @@ func (m TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch m.state {
 
-	case StateAbort:
+	case StateAbort, StateError:
 		return m, tea.Quit
 
 	case StateConsentSelection:
@@ -117,9 +113,31 @@ func (m TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case StateHDDSelection:
 		return m.updateHDDSelection(msg)
 
-	case StateDoWork:
+	case StateReviewConsentSelection:
+		return m.updateReviewConsentSelection(msg)
+
+	case StateDoAllWork:
 		m.state = StateProgressing
-		go m.workFunc(m.progressStatus, m.isHDD)
+		go m.imgProcessor.ProcessAll(m.isHDD)
+		return m, m.pollProgressStatus()
+
+	case StateUserReview:
+		return m.updateUserReviewSelection(msg)
+
+	case StateDoHashWork:
+		m.state = StateProgressing
+		go m.imgProcessor.ReviewHashProcess(m.isHDD)
+		return m, m.pollProgressStatus()
+
+	case StateDoUpdateWork:
+		m.state = StateProgressing
+		err := m.imgProcessor.RestoreFromReview()
+		if err != nil {
+			m.state = StateError
+			m.workErr.err = err
+			return m.Update(msg)
+		}
+		go m.imgProcessor.Update()
 		return m, m.pollProgressStatus()
 
 	case StateProgressing:
@@ -146,8 +164,17 @@ func (m TuiModel) View() string {
 	case StateHDDSelection:
 		return m.viewHardDriveSelection()
 
-	case StateDoWork, StateProgressing:
+	case StateReviewConsentSelection:
+		return m.viewReviewConsentSelection()
+
+	case StateDoAllWork,
+		StateDoHashWork,
+		StateDoUpdateWork,
+		StateProgressing:
 		return m.viewProgress()
+
+	case StateUserReview:
+		return m.viewUserReviewSelection()
 
 	case StateResults:
 		return m.viewResults()
@@ -191,14 +218,59 @@ func (m TuiModel) updateHDDSelection(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "down", "j":
 			m.hddIndex++
-			listLen := len(m.hddList)
+			// There are only two kinds of hard drives
+			listLen := 2
 			if m.hddIndex >= listLen {
 				m.hddIndex = listLen - 1
 			}
 
 		case "enter":
-			m.state = StateDoWork
 			m.isHDD = m.hddIndex == 0
+			m.state = StateReviewConsentSelection
+			return m, nil
+		}
+	}
+	return m, nil
+}
+
+func (m TuiModel) updateReviewConsentSelection(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "up", "k":
+			m.wantsReview = false
+
+		case "down", "j":
+			m.wantsReview = true
+
+		case "enter":
+			if m.wantsReview {
+				m.state = StateDoHashWork
+				return m.Update(msg)
+			}
+			m.state = StateDoAllWork
+			return m.Update(msg)
+		}
+	}
+	return m, nil
+}
+
+func (m TuiModel) updateUserReviewSelection(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "up", "k":
+			m.keepDupes = false
+
+		case "down", "j":
+			m.keepDupes = true
+
+		case "enter":
+			if m.keepDupes {
+				m.state = StateAbort
+				return m.Update(msg)
+			}
+			m.state = StateDoUpdateWork
 			return m.Update(msg)
 		}
 	}
@@ -206,22 +278,27 @@ func (m TuiModel) updateHDDSelection(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m TuiModel) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
+	status := m.imgProcessor.Status
 	switch msg.(type) {
 	case ProgressState:
 		switch msg {
 
 		case ProgressHash:
-			progressBy := 100 / float64(m.progressStatus.MaxHashProgress)
-			m.hashProgressPercent = progressBy / 100 * float64(m.progressStatus.HashProgress)
+			progressBy := 100 / float64(status.MaxHashProgress)
+			m.hashProgressPercent = progressBy / 100 * float64(status.HashProgress)
 			return m, m.pollProgressStatus()
 
 		case ProgressHashComplete:
 			m.hashProgressPercent = 1
+			if m.wantsReview && m.imgProcessor.HasDupes {
+				m.state = StateUserReview
+				return m.Update(msg)
+			}
 			return m, m.pollProgressStatus()
 
 		case ProgressUpdate:
-			progressBy := 100 / float64(m.progressStatus.MaxUpdateProgress)
-			m.updateProgressPercent = progressBy / 100 * float64(m.progressStatus.UpdateProgress)
+			progressBy := 100 / float64(status.MaxUpdateProgress)
+			m.updateProgressPercent = progressBy / 100 * float64(status.UpdateProgress)
 			return m, m.pollProgressStatus()
 
 		case ProgressUpdateComplete:
@@ -231,13 +308,13 @@ func (m TuiModel) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case ProgressHashErr:
 			m.state = StateError
 			m.workErr.name = "Hashing"
-			m.workErr.err = m.progressStatus.HashErr
+			m.workErr.err = status.HashErr
 			return m, tea.Quit
 
 		case ProgressUpdateErr:
 			m.state = StateError
 			m.workErr.name = "Updating"
-			m.workErr.err = m.progressStatus.UpdateErr
+			m.workErr.err = status.UpdateErr
 			return m, tea.Quit
 
 		case ProgressDone:
@@ -256,16 +333,17 @@ func (m TuiModel) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m TuiModel) pollProgressStatus() tea.Cmd {
+	status := m.imgProcessor.Status
 	return tea.Tick(time.Millisecond*pollingRateMilli, func(t time.Time) tea.Msg {
-		if m.progressStatus.HashErr != nil {
+		if status.HashErr != nil {
 			return ProgressHashErr
 		}
 
-		if m.progressStatus.UpdateErr != nil {
+		if status.UpdateErr != nil {
 			return ProgressUpdateErr
 		}
 
-		if m.progressStatus.HashProgress != m.progressStatus.MaxHashProgress {
+		if status.HashProgress != status.MaxHashProgress {
 			return ProgressHash
 		}
 
@@ -273,7 +351,7 @@ func (m TuiModel) pollProgressStatus() tea.Cmd {
 			return ProgressHashComplete
 		}
 
-		if m.progressStatus.UpdateProgress != m.progressStatus.MaxUpdateProgress {
+		if status.UpdateProgress != status.MaxUpdateProgress {
 			return ProgressUpdate
 		}
 

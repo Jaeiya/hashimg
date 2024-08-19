@@ -6,10 +6,10 @@ import (
 )
 
 type ProcessStatus struct {
-	TotalImages  int32
-	DupeImages   int32
-	CachedImages int32
-	NewImages    int32
+	TotalImageCount  int32
+	DupeImageCount   int32
+	CachedImageCount int32
+	NewImageCount    int32
 	// Progress of calculating file hashes
 	HashProgress int32
 	// Progress of renaming and/or removing files
@@ -42,5 +42,5 @@ func (ps *ProcessStatus) IncUpdateProgress() {
 // IncCachedImages atomically increments CachedImages. This makes it
 // thread-safe.
 func (ps *ProcessStatus) IncCachedImages() {
-	atomic.AddInt32(&ps.CachedImages, 1)
+	atomic.AddInt32(&ps.CachedImageCount, 1)
 }

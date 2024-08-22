@@ -130,6 +130,11 @@ func (ip *ImageProcessor) RestoreFromReview() error {
 	return os.RemoveAll(ip.dupeReviewFolder)
 }
 
+/*
+ProcessHash calculates the hash of all images in the image map and
+separates out the duplicates from the new images. The result is
+saved to the filteredImages field.
+*/
 func (ip *ImageProcessor) ProcessHash(useBuffer bool) error {
 	timeStart := time.Now()
 	defer func() { ip.ProcessTime = time.Since(timeStart) }()
@@ -157,6 +162,11 @@ func (ip *ImageProcessor) ProcessHash(useBuffer bool) error {
 	return nil
 }
 
+/*
+Update handles renaming and deleting images that have had their hashes
+processed. If the type of process was a "review", then it ONLY renames
+the images.
+*/
 func (ip *ImageProcessor) Update() error {
 	timeStart := time.Now()
 	defer func() { ip.ProcessTime = ip.ProcessTime + time.Since(timeStart) }()

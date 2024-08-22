@@ -48,6 +48,10 @@ changelog:
       regexp: "^.*chore[(\\w)]*:+.*$"
       order: 600
 
+    - title: "Testing"
+      regexp: "^.*tdd[(\\w)]*:+.*$"
+      order: 700
+
     - title: "Other"
       order: 999
 

@@ -126,7 +126,7 @@ func (m TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case StateDoHashWork:
 		m.state = StateProgressing
-		go m.imgProcessor.ReviewHashProcess(m.isHDD)
+		go m.imgProcessor.ProcessHashReview(m.isHDD)
 		return m, m.pollProgressStatus()
 
 	case StateDoUpdateWork:

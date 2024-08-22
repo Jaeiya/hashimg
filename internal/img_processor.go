@@ -63,7 +63,12 @@ func (ip *ImageProcessor) ProcessAll(useBuffer bool) error {
 	return ip.Update()
 }
 
-func (ip *ImageProcessor) ReviewHashProcess(useBuffer bool) error {
+/*
+ProcessHashReview does the same thing as ProcessHash() but also moves
+all duplicate images to a temporary folder, for the user to review.
+The folder is automatically opened, after the images are moved.
+*/
+func (ip *ImageProcessor) ProcessHashReview(useBuffer bool) error {
 	err := ip.ProcessHash(useBuffer)
 	if err != nil {
 		return err

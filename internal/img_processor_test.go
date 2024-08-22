@@ -1,10 +1,14 @@
 package internal
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type MockImgProcData struct {
@@ -12,7 +16,15 @@ type MockImgProcData struct {
 	files       []string
 	fileContent []string
 	expectFiles []string
+
+	// Used for review process
+
+	dupeFiles       []string
+	dupeContent     []string
+	expectDupeFiles []string
 }
+
+const hashLength = 32
 
 func TestImageProcessor(t *testing.T) {
 	const hashPrefix = "0x@"
@@ -25,7 +37,7 @@ func TestImageProcessor(t *testing.T) {
 			WorkingDir: wd,
 			Prefix:     hashPrefix,
 			ImageMap:   ImageMap{},
-			HashLength: 32,
+			HashLength: hashLength,
 		})
 		err := imgProcessor.ProcessAll(false)
 		a.ErrorIs(err, ErrNoImages)
@@ -165,7 +177,7 @@ func TestImageProcessor(t *testing.T) {
 				WorkingDir: dir,
 				Prefix:     hashPrefix,
 				ImageMap:   iMap,
-				HashLength: 32,
+				HashLength: hashLength,
 			})
 			err = imgProcessor.ProcessAll(false)
 			a.NoError(err)
@@ -181,7 +193,259 @@ func TestImageProcessor(t *testing.T) {
 	}
 }
 
+func TestReviewProcess(t *testing.T) {
+	hashPrefix := "0x@"
+	t.Run("should immediately return if no dupes found", func(t *testing.T) {
+		t.Parallel()
+		a := assert.New(t)
+		dir := t.TempDir()
+		err := writeFiles(dir, []string{"t0.jpg", "t1.jpg"}, []string{"0", "1"})
+		a.NoError(err)
+
+		iMap, err := MapImages(dir, hashPrefix)
+		a.NoError(err)
+		imgProcessor := NewImageProcessor(ImageProcessorConfig{
+			WorkingDir: dir,
+			Prefix:     hashPrefix,
+			ImageMap:   iMap,
+			HashLength: hashLength,
+		})
+		err = imgProcessor.ProcessHashReview(false)
+		a.NoError(err)
+		_, err = os.Stat(filepath.Join(dir, "__dupes"))
+		a.ErrorContains(err, "cannot find the file", "dupe folder should not exist")
+		a.Len(imgProcessor.FilteredImages.DupeMap, 0, "there should be no dupe images")
+	})
+
+	md := []MockImgProcData{
+		{
+			should:      "move duplicate new files",
+			dupeFiles:   []string{"t0.jpg", "t1.jpg"},
+			dupeContent: []string{"0", "0"},
+			expectDupeFiles: []string{
+				fmt.Sprintf("%s_1.jpg", calcSha256("0")),
+				fmt.Sprintf("%s_2.jpg", calcSha256("0")),
+			},
+		},
+		{
+			should: "move lots of duplicate new images",
+			dupeFiles: []string{
+				"t0.jpg",
+				"t1.jpg",
+				"t2.jpg",
+				"t3.jpg",
+				"t4.jpg",
+				"t5.jpg",
+				"t6.jpg",
+			},
+			dupeContent: []string{"0", "0", "0", "0", "1", "1", "1"},
+			expectDupeFiles: []string{
+				fmt.Sprintf("%s_1.jpg", calcSha256("0")),
+				fmt.Sprintf("%s_2.jpg", calcSha256("0")),
+				fmt.Sprintf("%s_3.jpg", calcSha256("0")),
+				fmt.Sprintf("%s_4.jpg", calcSha256("0")),
+				fmt.Sprintf("%s_1.jpg", calcSha256("1")),
+				fmt.Sprintf("%s_2.jpg", calcSha256("1")),
+				fmt.Sprintf("%s_3.jpg", calcSha256("1")),
+			},
+		},
+		{
+			should: "move duplicate cached files",
+			dupeFiles: []string{
+				fmt.Sprintf("0x@%s.jpg", calcSha256("0")),
+				"t0.jpg",
+			},
+			dupeContent: []string{"0", "0"},
+			expectDupeFiles: []string{
+				fmt.Sprintf("%s_1.jpg", calcSha256("0")),
+				fmt.Sprintf("%s_2.jpg", calcSha256("0")),
+			},
+		},
+		{
+			should: "move combination of new and cached duplicate files",
+			dupeFiles: []string{
+				fmt.Sprintf("0x@%s.jpg", calcSha256("0")),
+				fmt.Sprintf("0x@%s.jpg", calcSha256("1")),
+				fmt.Sprintf("0x@%s.jpg", calcSha256("2")),
+				"t1.jpg",
+				"t2.jpg",
+				"t3.jpg",
+				"t4.jpg",
+				"t5.jpg",
+				"t6.jpg",
+				"t7.jpg",
+				"t8.jpg",
+				"t9.jpg",
+				"t10.jpg",
+				"t11.jpg",
+				"t12.jpg",
+				"t13.jpg",
+				"t14.jpg",
+			},
+			dupeContent: []string{
+				"0",
+				"1",
+				"2",
+				"0",
+				"0",
+				"0",
+				"0",
+				"1",
+				"1",
+				"1",
+				"2",
+				"2",
+				"2",
+				"2",
+				"3",
+				"3",
+				"3",
+			},
+			expectDupeFiles: []string{
+				fmt.Sprintf("%s_1.jpg", calcSha256("0")),
+				fmt.Sprintf("%s_2.jpg", calcSha256("0")),
+				fmt.Sprintf("%s_3.jpg", calcSha256("0")),
+				fmt.Sprintf("%s_4.jpg", calcSha256("0")),
+				fmt.Sprintf("%s_5.jpg", calcSha256("0")),
+				fmt.Sprintf("%s_1.jpg", calcSha256("1")),
+				fmt.Sprintf("%s_2.jpg", calcSha256("1")),
+				fmt.Sprintf("%s_3.jpg", calcSha256("1")),
+				fmt.Sprintf("%s_4.jpg", calcSha256("1")),
+				fmt.Sprintf("%s_1.jpg", calcSha256("2")),
+				fmt.Sprintf("%s_2.jpg", calcSha256("2")),
+				fmt.Sprintf("%s_3.jpg", calcSha256("2")),
+				fmt.Sprintf("%s_4.jpg", calcSha256("2")),
+				fmt.Sprintf("%s_5.jpg", calcSha256("2")),
+				fmt.Sprintf("%s_1.jpg", calcSha256("3")),
+				fmt.Sprintf("%s_2.jpg", calcSha256("3")),
+				fmt.Sprintf("%s_3.jpg", calcSha256("3")),
+			},
+		},
+		{
+			should: "leave non-dupe files alone",
+			files: []string{
+				fmt.Sprintf("0x@%s.jpg", calcSha256("0")),
+				fmt.Sprintf("0x@%s.jpg", calcSha256("1")),
+				fmt.Sprintf("0x@%s.jpg", calcSha256("2")),
+				"t5.jpg",
+				"t6.jpg",
+			},
+			fileContent: []string{
+				"0",
+				"1",
+				"2",
+				"5",
+				"6",
+			},
+			expectFiles: []string{
+				fmt.Sprintf("0x@%s.jpg", calcSha256("0")),
+				fmt.Sprintf("0x@%s.jpg", calcSha256("1")),
+				fmt.Sprintf("0x@%s.jpg", calcSha256("2")),
+				"t5.jpg",
+				"t6.jpg",
+			},
+			dupeFiles: []string{
+				fmt.Sprintf("0x@%s.jpg", calcSha256("3")),
+				"t0.jpg",
+				"t1.jpg",
+				"t2.jpg",
+				"t3.jpg",
+			},
+			dupeContent: []string{
+				"3",
+				"3",
+				"3",
+				"4",
+				"4",
+			},
+			expectDupeFiles: []string{
+				fmt.Sprintf("%s_1.jpg", calcSha256("3")),
+				fmt.Sprintf("%s_2.jpg", calcSha256("3")),
+				fmt.Sprintf("%s_3.jpg", calcSha256("3")),
+				fmt.Sprintf("%s_1.jpg", calcSha256("4")),
+				fmt.Sprintf("%s_2.jpg", calcSha256("4")),
+			},
+		},
+	}
+	_ = md
+
+	for _, d := range md {
+		t.Run("should "+d.should, func(t *testing.T) {
+			t.Parallel()
+			a := assert.New(t)
+			dir := t.TempDir()
+			hasDupes := len(d.dupeFiles) > 0
+			hasFiles := len(d.files) > 0
+
+			if hasFiles {
+				err := writeFiles(dir, d.files, d.fileContent)
+				require.NoError(t, err)
+			}
+
+			if hasDupes {
+				err := writeFiles(dir, d.dupeFiles, d.dupeContent)
+				require.NoError(t, err)
+			}
+
+			iMap, err := MapImages(dir, hashPrefix)
+			a.NoError(err)
+			imgProcessor := NewImageProcessor(ImageProcessorConfig{
+				WorkingDir: dir,
+				Prefix:     hashPrefix,
+				ImageMap:   iMap,
+				HashLength: hashLength,
+			})
+
+			err = imgProcessor.ProcessHashReview(false)
+			require.NoError(t, err, "process hashes and move files without error")
+
+			if hasDupes {
+				_, err = os.Stat(filepath.Join(dir, "__dupes"))
+				require.NoError(t, err, "dupes folder should exist")
+				fileNames, err := readDir(filepath.Join(dir, "__dupes"))
+				require.NoError(t, err, "read directory without error")
+				for _, fn := range fileNames {
+					a.Contains(
+						d.expectDupeFiles,
+						fn,
+						"expected files should contain actual file",
+					)
+				}
+				a.Len(d.expectDupeFiles, len(fileNames))
+			}
+
+			if len(d.files) > 0 {
+				fileNames, err := readDir(dir)
+				require.NoError(t, err, "read directory without error")
+				require.Len(
+					t,
+					fileNames,
+					len(d.files)+1, // +1 accounts for __dupes folder
+					"we should have files that were not moved",
+				)
+				for _, fn := range fileNames {
+					// Ignore directory name
+					if fn == "__dupes" {
+						continue
+					}
+					a.Contains(d.expectFiles, fn, "expect non-duplicates to be moved")
+				}
+			}
+
+			if len(d.files) == 0 {
+				files, err := readDir(dir)
+				require.NoError(t, err)
+				a.Len(files, 1, "all files should be moved to dupes folder")
+			}
+		})
+	}
+
+}
+
 func writeFiles(dir string, files []string, fileContent []string) error {
+	if len(files) != len(fileContent) {
+		return fmt.Errorf("files length does not match file content length")
+	}
 	for i, file := range files {
 		err := os.WriteFile(dir+"/"+file, []byte(fileContent[i]), 0o644)
 		if err != nil {
@@ -189,6 +453,12 @@ func writeFiles(dir string, files []string, fileContent []string) error {
 		}
 	}
 	return nil
+}
+
+func calcSha256(v string) string {
+	s := sha256.New()
+	s.Write([]byte(v))
+	return fmt.Sprintf("%x", s.Sum(nil))[:hashLength]
 }
 
 func readDir(dir string) ([]string, error) {

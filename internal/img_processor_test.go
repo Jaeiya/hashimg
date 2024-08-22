@@ -19,10 +19,11 @@ type MockImgProcData struct {
 
 	// Used for review process
 
-	dupeFiles       []string
-	dupeContent     []string
-	expectDupeFiles []string
-	expectDupeCount int32
+	dupeFiles        []string
+	dupeContent      []string
+	expectDupeFiles  []string
+	expectImageCount int32
+	expectDupeCount  int32
 }
 
 const hashLength = 32
@@ -196,34 +197,14 @@ func TestImageProcessor(t *testing.T) {
 
 func TestReviewProcess(t *testing.T) {
 	hashPrefix := "0x@"
-	t.Run("should immediately return if no dupes found", func(t *testing.T) {
-		t.Parallel()
-		a := assert.New(t)
-		dir := t.TempDir()
-		err := writeFiles(dir, []string{"t0.jpg", "t1.jpg"}, []string{"0", "1"})
-		a.NoError(err)
-
-		iMap, err := MapImages(dir, hashPrefix)
-		a.NoError(err)
-		imgProcessor := NewImageProcessor(ImageProcessorConfig{
-			WorkingDir: dir,
-			Prefix:     hashPrefix,
-			ImageMap:   iMap,
-			HashLength: hashLength,
-		})
-		err = imgProcessor.ProcessHashReview(false)
-		a.NoError(err)
-		_, err = os.Stat(filepath.Join(dir, "__dupes"))
-		a.ErrorContains(err, "cannot find the file", "dupe folder should not exist")
-		a.Len(imgProcessor.FilteredImages.DupeMap, 0, "there should be no dupe images")
-	})
 
 	md := []MockImgProcData{
 		{
-			should:          "move duplicate new files",
-			dupeFiles:       []string{"t0.jpg", "t1.jpg"},
-			dupeContent:     []string{"0", "0"},
-			expectDupeCount: 1,
+			should:           "move duplicate new files",
+			dupeFiles:        []string{"t0.jpg", "t1.jpg"},
+			dupeContent:      []string{"0", "0"},
+			expectDupeCount:  1,
+			expectImageCount: 1,
 			expectDupeFiles: []string{
 				fmt.Sprintf("%s_1.jpg", calcSha256("0")),
 				fmt.Sprintf("%s_2.jpg", calcSha256("0")),
@@ -240,8 +221,9 @@ func TestReviewProcess(t *testing.T) {
 				"t5.jpg",
 				"t6.jpg",
 			},
-			dupeContent:     []string{"0", "0", "0", "0", "1", "1", "1"},
-			expectDupeCount: 5,
+			dupeContent:      []string{"0", "0", "0", "0", "1", "1", "1"},
+			expectImageCount: 2,
+			expectDupeCount:  5,
 			expectDupeFiles: []string{
 				fmt.Sprintf("%s_1.jpg", calcSha256("0")),
 				fmt.Sprintf("%s_2.jpg", calcSha256("0")),
@@ -258,8 +240,9 @@ func TestReviewProcess(t *testing.T) {
 				fmt.Sprintf("0x@%s.jpg", calcSha256("0")),
 				"t0.jpg",
 			},
-			expectDupeCount: 1,
-			dupeContent:     []string{"0", "0"},
+			expectImageCount: 0,
+			expectDupeCount:  1,
+			dupeContent:      []string{"0", "0"},
 			expectDupeFiles: []string{
 				fmt.Sprintf("%s_1.jpg", calcSha256("0")),
 				fmt.Sprintf("%s_2.jpg", calcSha256("0")),
@@ -305,7 +288,8 @@ func TestReviewProcess(t *testing.T) {
 				"3",
 				"3",
 			},
-			expectDupeCount: 13,
+			expectImageCount: 1,
+			expectDupeCount:  13,
 			expectDupeFiles: []string{
 				fmt.Sprintf("%s_1.jpg", calcSha256("0")),
 				fmt.Sprintf("%s_2.jpg", calcSha256("0")),
@@ -363,7 +347,8 @@ func TestReviewProcess(t *testing.T) {
 				"4",
 				"4",
 			},
-			expectDupeCount: 3,
+			expectImageCount: 3,
+			expectDupeCount:  3,
 			expectDupeFiles: []string{
 				fmt.Sprintf("%s_1.jpg", calcSha256("3")),
 				fmt.Sprintf("%s_2.jpg", calcSha256("3")),
@@ -371,6 +356,26 @@ func TestReviewProcess(t *testing.T) {
 				fmt.Sprintf("%s_1.jpg", calcSha256("4")),
 				fmt.Sprintf("%s_2.jpg", calcSha256("4")),
 			},
+		},
+		{
+			should: "do nothing if no duplicate images",
+			files: []string{
+				fmt.Sprintf("0x@%s.jpg", calcSha256("0")),
+				fmt.Sprintf("0x@%s.jpg", calcSha256("1")),
+				fmt.Sprintf("0x@%s.jpg", calcSha256("2")),
+			},
+			fileContent: []string{
+				"0",
+				"1",
+				"2",
+			},
+			expectFiles: []string{
+				fmt.Sprintf("0x@%s.jpg", calcSha256("0")),
+				fmt.Sprintf("0x@%s.jpg", calcSha256("1")),
+				fmt.Sprintf("0x@%s.jpg", calcSha256("2")),
+			},
+			expectImageCount: 0,
+			expectDupeCount:  0,
 		},
 	}
 	_ = md
@@ -418,16 +423,31 @@ func TestReviewProcess(t *testing.T) {
 					)
 				}
 				a.Len(d.expectDupeFiles, len(fileNames))
-				a.Equal(d.expectDupeCount, imgProcessor.Status.DupeImageCount)
+				a.Equal(
+					d.expectDupeCount,
+					imgProcessor.Status.DupeImageCount,
+					"should have accurate dupe count",
+				)
+			}
+
+			if !hasDupes {
+				_, err = os.Stat(filepath.Join(dir, "__dupes"))
+				a.Error(err, "temp dupes dir should not exist")
 			}
 
 			if len(d.files) > 0 {
 				fileNames, err := readDir(dir)
 				require.NoError(t, err, "read directory without error")
+
+				// If dupes exist then we don't count __dupes dir
+				adjustedLen := 1
+				if !hasDupes {
+					adjustedLen -= 1
+				}
 				require.Len(
 					t,
 					fileNames,
-					len(d.files)+1, // +1 accounts for __dupes folder
+					len(d.files)+adjustedLen,
 					"we should have files that were not moved",
 				)
 				for _, fn := range fileNames {
@@ -438,6 +458,12 @@ func TestReviewProcess(t *testing.T) {
 					a.Contains(d.expectFiles, fn, "expect non-duplicates to be moved")
 				}
 			}
+
+			a.Equal(
+				d.expectImageCount,
+				imgProcessor.Status.NewImageCount,
+				"should have accurate image count",
+			)
 
 			if len(d.files) == 0 {
 				files, err := readDir(dir)

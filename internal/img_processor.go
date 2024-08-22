@@ -17,6 +17,7 @@ type ImageProcessor struct {
 	Status           *models.ProcessStatus
 	WorkingDir       string
 	HasDupes         bool
+	OpenReviewFolder bool
 	isReviewProcess  bool
 	dupeReviewFolder string
 	DupeRestorePaths []string
@@ -33,6 +34,7 @@ type ImageProcessorConfig struct {
 	WorkingDir       string
 	ImageMap         ImageMap
 	DupeReviewFolder string
+	OpenReviewFolder bool
 }
 
 type FilteredImages struct {
@@ -52,6 +54,7 @@ func NewImageProcessor(cfg ImageProcessorConfig) *ImageProcessor {
 		hashLength:       cfg.HashLength,
 		imageMap:         cfg.ImageMap,
 		DupeRestorePaths: []string{},
+		OpenReviewFolder: cfg.OpenReviewFolder,
 	}
 }
 
@@ -117,7 +120,9 @@ func (ip *ImageProcessor) ProcessHashReview(useBuffer bool) error {
 
 	ip.Status.NewImageCount = int32(len(fi.NewHashesMap) - cachedImageCount)
 
-	utils.OpenFolder(ip.dupeReviewFolder)
+	if ip.OpenReviewFolder {
+		utils.OpenFolder(ip.dupeReviewFolder)
+	}
 
 	return nil
 }

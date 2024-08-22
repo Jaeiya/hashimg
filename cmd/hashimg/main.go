@@ -35,6 +35,7 @@ func main() {
 			ImageMap:         iMap,
 			HashLength:       hashLength,
 			DupeReviewFolder: dupeReviewFolder,
+			OpenReviewFolder: true,
 		},
 	)
 

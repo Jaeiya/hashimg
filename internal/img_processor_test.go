@@ -22,6 +22,7 @@ type MockImgProcData struct {
 	dupeFiles       []string
 	dupeContent     []string
 	expectDupeFiles []string
+	expectDupeCount int32
 }
 
 const hashLength = 32
@@ -219,9 +220,10 @@ func TestReviewProcess(t *testing.T) {
 
 	md := []MockImgProcData{
 		{
-			should:      "move duplicate new files",
-			dupeFiles:   []string{"t0.jpg", "t1.jpg"},
-			dupeContent: []string{"0", "0"},
+			should:          "move duplicate new files",
+			dupeFiles:       []string{"t0.jpg", "t1.jpg"},
+			dupeContent:     []string{"0", "0"},
+			expectDupeCount: 1,
 			expectDupeFiles: []string{
 				fmt.Sprintf("%s_1.jpg", calcSha256("0")),
 				fmt.Sprintf("%s_2.jpg", calcSha256("0")),
@@ -238,7 +240,8 @@ func TestReviewProcess(t *testing.T) {
 				"t5.jpg",
 				"t6.jpg",
 			},
-			dupeContent: []string{"0", "0", "0", "0", "1", "1", "1"},
+			dupeContent:     []string{"0", "0", "0", "0", "1", "1", "1"},
+			expectDupeCount: 5,
 			expectDupeFiles: []string{
 				fmt.Sprintf("%s_1.jpg", calcSha256("0")),
 				fmt.Sprintf("%s_2.jpg", calcSha256("0")),
@@ -255,7 +258,8 @@ func TestReviewProcess(t *testing.T) {
 				fmt.Sprintf("0x@%s.jpg", calcSha256("0")),
 				"t0.jpg",
 			},
-			dupeContent: []string{"0", "0"},
+			expectDupeCount: 1,
+			dupeContent:     []string{"0", "0"},
 			expectDupeFiles: []string{
 				fmt.Sprintf("%s_1.jpg", calcSha256("0")),
 				fmt.Sprintf("%s_2.jpg", calcSha256("0")),
@@ -301,6 +305,7 @@ func TestReviewProcess(t *testing.T) {
 				"3",
 				"3",
 			},
+			expectDupeCount: 13,
 			expectDupeFiles: []string{
 				fmt.Sprintf("%s_1.jpg", calcSha256("0")),
 				fmt.Sprintf("%s_2.jpg", calcSha256("0")),
@@ -358,6 +363,7 @@ func TestReviewProcess(t *testing.T) {
 				"4",
 				"4",
 			},
+			expectDupeCount: 3,
 			expectDupeFiles: []string{
 				fmt.Sprintf("%s_1.jpg", calcSha256("3")),
 				fmt.Sprintf("%s_2.jpg", calcSha256("3")),
@@ -412,6 +418,7 @@ func TestReviewProcess(t *testing.T) {
 					)
 				}
 				a.Len(d.expectDupeFiles, len(fileNames))
+				a.Equal(d.expectDupeCount, imgProcessor.Status.DupeImageCount)
 			}
 
 			if len(d.files) > 0 {

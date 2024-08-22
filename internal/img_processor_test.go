@@ -475,6 +475,53 @@ func TestReviewProcess(t *testing.T) {
 
 }
 
+func TestReviewRestoration(t *testing.T) {
+	hashPrefix := "0x@"
+
+	t.Run("should restore new images and delete temp folder", func(t *testing.T) {
+		t.Parallel()
+		a := assert.New(t)
+		dir := t.TempDir()
+		writeFiles(
+			dir,
+			[]string{
+				"t1.jpg",
+				"t2.jpg",
+				"t3.jpg",
+				"t4.jpg",
+				fmt.Sprintf("0x@%s.jpg", calcSha256("2")),
+				"t6.jpg",
+				"t7.jpg",
+			},
+			[]string{"0", "0", "1", "1", "2", "2", "2"},
+		)
+
+		iMap, err := MapImages(dir, hashPrefix)
+		a.NoError(err)
+		imgProcessor := NewImageProcessor(ImageProcessorConfig{
+			WorkingDir: dir,
+			Prefix:     hashPrefix,
+			ImageMap:   iMap,
+			HashLength: hashLength,
+		})
+
+		err = imgProcessor.ProcessHashReview(false)
+		require.NoError(t, err)
+
+		err = imgProcessor.RestoreFromReview()
+		require.NoError(t, err)
+
+		fileNames, err := readDir(dir)
+		require.NoError(t, err)
+		a.Len(fileNames, 3, "there should only be 3 preserved files")
+		a.NotContains(fileNames, "__dupes", "temp dupe folder should not exist")
+		a.Contains(fileNames, fmt.Sprintf("%s_1.jpg", calcSha256("0")))
+		a.Contains(fileNames, fmt.Sprintf("%s_1.jpg", calcSha256("1")))
+		a.Contains(fileNames, fmt.Sprintf("%s_1.jpg", calcSha256("2")))
+	})
+
+}
+
 func writeFiles(dir string, files []string, fileContent []string) error {
 	if len(files) != len(fileContent) {
 		return fmt.Errorf("files length does not match file content length")

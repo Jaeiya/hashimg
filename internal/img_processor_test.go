@@ -198,8 +198,10 @@ func TestImageProcessor(t *testing.T) {
 				HashLength: hashLength,
 			})
 			err = imgProcessor.ProcessImages(false)
-			a.NoError(err)
+			require.NoError(t, err)
+
 			err = imgProcessor.UpdateImages()
+			require.NoError(t, err)
 
 			a.True(
 				imgProcessor.Status.UpdatingComplete,

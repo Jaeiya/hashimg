@@ -24,7 +24,10 @@ const (
 	StateDoAllWork
 	StateDoHashWork
 	StateDoUpdateWork
-	StateProgressing
+	StateDoHashReviewWork
+	StateDoUpdateReviewWork
+	StateHashProgressing
+	StateUpdateProgressing
 	StateResults
 	StateError
 	StateDone
@@ -116,21 +119,23 @@ func (m TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case StateReviewConsentSelection:
 		return m.updateReviewConsentSelection(msg)
 
-	case StateDoAllWork:
-		m.state = StateProgressing
-		go m.imgProcessor.ProcessAll(m.isHDD)
-		return m, m.pollProgressStatus()
-
-	case StateUserReview:
-		return m.updateUserReviewSelection(msg)
-
 	case StateDoHashWork:
-		m.state = StateProgressing
-		go m.imgProcessor.ProcessImagesForReview(m.isHDD)
+		m.state = StateHashProgressing
+		go m.imgProcessor.ProcessImages(m.isHDD)
 		return m, m.pollProgressStatus()
 
 	case StateDoUpdateWork:
-		m.state = StateProgressing
+		m.state = StateUpdateProgressing
+		go m.imgProcessor.UpdateImages()
+		return m, m.pollProgressStatus()
+
+	case StateDoHashReviewWork:
+		m.state = StateHashProgressing
+		go m.imgProcessor.ProcessImagesForReview(m.isHDD)
+		return m, m.pollProgressStatus()
+
+	case StateDoUpdateReviewWork:
+		m.state = StateUpdateProgressing
 		err := m.imgProcessor.RestoreFromReview()
 		if err != nil {
 			m.state = StateError
@@ -140,7 +145,10 @@ func (m TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		go m.imgProcessor.UpdateImages()
 		return m, m.pollProgressStatus()
 
-	case StateProgressing:
+	case StateUserReview:
+		return m.updateUserReviewSelection(msg)
+
+	case StateHashProgressing, StateUpdateProgressing:
 		return m.updateProgress(msg)
 
 	default:
@@ -170,7 +178,8 @@ func (m TuiModel) View() string {
 	case StateDoAllWork,
 		StateDoHashWork,
 		StateDoUpdateWork,
-		StateProgressing:
+		StateHashProgressing,
+		StateUpdateProgressing:
 		return m.viewProgress()
 
 	case StateUserReview:
@@ -245,10 +254,10 @@ func (m TuiModel) updateReviewConsentSelection(msg tea.Msg) (tea.Model, tea.Cmd)
 
 		case "enter":
 			if m.wantsReview {
-				m.state = StateDoHashWork
+				m.state = StateDoHashReviewWork
 				return m.Update(msg)
 			}
-			m.state = StateDoAllWork
+			m.state = StateDoHashWork
 			return m.Update(msg)
 		}
 	}
@@ -270,7 +279,7 @@ func (m TuiModel) updateUserReviewSelection(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.state = StateAbort
 				return m.Update(msg)
 			}
-			m.state = StateDoUpdateWork
+			m.state = StateDoUpdateReviewWork
 			return m.Update(msg)
 		}
 	}
@@ -294,7 +303,8 @@ func (m TuiModel) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.state = StateUserReview
 				return m.Update(msg)
 			}
-			return m, m.pollProgressStatus()
+			m.state = StateDoUpdateWork
+			return m.Update(msg)
 
 		case ProgressUpdate:
 			progressBy := 100 / float64(status.MaxUpdateProgress)
@@ -303,7 +313,8 @@ func (m TuiModel) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case ProgressUpdateComplete:
 			m.updateProgressPercent = 1
-			return m, m.pollProgressStatus()
+			m.state = StateResults
+			return m, tea.Quit
 
 		case ProgressHashErr:
 			m.state = StateError
@@ -347,7 +358,7 @@ func (m TuiModel) pollProgressStatus() tea.Cmd {
 			return ProgressHash
 		}
 
-		if m.hashProgressPercent != 1 {
+		if status.ProcessingComplete && m.state == StateHashProgressing {
 			return ProgressHashComplete
 		}
 
@@ -355,12 +366,8 @@ func (m TuiModel) pollProgressStatus() tea.Cmd {
 			return ProgressUpdate
 		}
 
-		if m.updateProgressPercent != 1 {
+		if status.UpdatingComplete && m.state == StateUpdateProgressing {
 			return ProgressUpdateComplete
-		}
-
-		if m.updateProgressPercent == 1 {
-			return ProgressDone
 		}
 
 		panic("tried to send empty progress state")

@@ -151,7 +151,10 @@ This allows us to call UpdateImages() without a dependency.
 */
 func (ip *ImageProcessor) ProcessImages(useBuffer bool) error {
 	timeStart := time.Now()
-	defer func() { ip.ProcessTime = time.Since(timeStart) }()
+	defer func() {
+		ip.ProcessTime = time.Since(timeStart)
+		ip.Status.ProcessingComplete = true
+	}()
 
 	if len(ip.imageMap) == 0 {
 		return ErrNoImages
@@ -176,25 +179,25 @@ func (ip *ImageProcessor) ProcessImages(useBuffer bool) error {
 	defer func() { ip.Status.FilterTook = time.Since(start) }()
 
 	newImagesByHash := map[string]HashInfo{}
-	dupeImageByHash := map[string][]HashInfo{}
+	dupeImagesByHash := map[string][]HashInfo{}
 
 	for _, hashInfo := range hashResult.newHashesInfo {
-		if _, isDupe := dupeImageByHash[hashInfo.hash]; isDupe {
-			dupeImageByHash[hashInfo.hash] = append(dupeImageByHash[hashInfo.hash], hashInfo)
+		if _, isDupe := dupeImagesByHash[hashInfo.hash]; isDupe {
+			dupeImagesByHash[hashInfo.hash] = append(dupeImagesByHash[hashInfo.hash], hashInfo)
 			delete(newImagesByHash, hashInfo.hash)
 			continue
 		}
 
 		if oldInfo, isDupe := hashResult.oldHashesInfo[hashInfo.hash]; isDupe {
 			oldInfo.isNovel = true
-			dupeImageByHash[oldInfo.hash] = []HashInfo{oldInfo, hashInfo}
+			dupeImagesByHash[oldInfo.hash] = []HashInfo{oldInfo, hashInfo}
 			delete(newImagesByHash, hashInfo.hash)
 			continue
 		}
 
 		if newInfo, isDupe := newImagesByHash[hashInfo.hash]; isDupe {
 			newInfo.isNovel = true
-			dupeImageByHash[newInfo.hash] = []HashInfo{newInfo, hashInfo}
+			dupeImagesByHash[newInfo.hash] = []HashInfo{newInfo, hashInfo}
 			delete(newImagesByHash, hashInfo.hash)
 			continue
 		}
@@ -202,9 +205,9 @@ func (ip *ImageProcessor) ProcessImages(useBuffer bool) error {
 		newImagesByHash[hashInfo.hash] = hashInfo
 	}
 
-	ip.HasDupes = len(dupeImageByHash) > 0
+	ip.HasDupes = len(dupeImagesByHash) > 0
 
-	ip.processedImages = &ProcessedImages{newImagesByHash, dupeImageByHash}
+	ip.processedImages = &ProcessedImages{newImagesByHash, dupeImagesByHash}
 	return nil
 }
 
@@ -215,7 +218,10 @@ the images.
 */
 func (ip *ImageProcessor) UpdateImages() error {
 	timeStart := time.Now()
-	defer func() { ip.ProcessTime = ip.ProcessTime + time.Since(timeStart) }()
+	defer func() {
+		ip.ProcessTime = ip.ProcessTime + time.Since(timeStart)
+		ip.Status.UpdatingComplete = true
+	}()
 
 	if ip.isReviewProcess {
 		if err := ip.renameOnly(); err != nil {

@@ -17,14 +17,16 @@ type ProcessStatus struct {
 	// The total amount of image hashes that are to be processed
 	MaxHashProgress int32
 	// The total amount of renames and removals to be processed
-	MaxUpdateProgress int32
-	HashingTook       time.Duration
-	UpdatingTook      time.Duration
-	FilterTook        time.Duration
-	AnalyzeTook       time.Duration
-	TotalTime         time.Duration
-	HashErr           error
-	UpdateErr         error
+	MaxUpdateProgress  int32
+	ProcessingComplete bool
+	UpdatingComplete   bool
+	HashingTook        time.Duration
+	UpdatingTook       time.Duration
+	FilterTook         time.Duration
+	AnalyzeTook        time.Duration
+	TotalTime          time.Duration
+	HashErr            error
+	UpdateErr          error
 }
 
 // IncProgress atomically increments HashProgress. This makes it

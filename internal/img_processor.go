@@ -22,7 +22,7 @@ type ImageProcessor struct {
 	OpenReviewFolder bool
 	isReviewProcess  bool
 	dupeReviewFolder string
-	DupeRestorePaths []string
+	NovelDupePaths   []string
 	hashPrefix       string
 	hashLength       int
 	imageMap         ImageMap
@@ -55,7 +55,7 @@ func NewImageProcessor(cfg ImageProcessorConfig) *ImageProcessor {
 		hashPrefix:       cfg.Prefix,
 		hashLength:       cfg.HashLength,
 		imageMap:         cfg.ImageMap,
-		DupeRestorePaths: []string{},
+		NovelDupePaths:   []string{},
 		OpenReviewFolder: cfg.OpenReviewFolder,
 	}
 }
@@ -130,9 +130,9 @@ func (ip *ImageProcessor) ProcessImages(useBuffer bool) error {
 }
 
 /*
-ProcessImagesForReview does the same thing as ProcessImages(), but also moves
-all duplicate images to a temporary folder for the user to review. The folder
-is automatically opened after the images are moved.
+ProcessImagesForReview processes the images, but also moves duplicate
+images to a temporary "dupe review folder," for the user to review.
+The folder is automatically opened after the dupes are moved.
 */
 func (ip *ImageProcessor) ProcessImagesForReview(useBuffer bool) error {
 	err := ip.ProcessImages(useBuffer)
@@ -169,8 +169,8 @@ func (ip *ImageProcessor) ProcessImagesForReview(useBuffer bool) error {
 				cachedImageCount += 1
 			}
 			if dupe.isNovel {
-				ip.DupeRestorePaths = append(
-					ip.DupeRestorePaths,
+				ip.NovelDupePaths = append(
+					ip.NovelDupePaths,
 					filepath.Join(ip.dupeReviewFolder, reviewFileName),
 				)
 				dupe.path = filepath.Join(ip.WorkingDir, reviewFileName)
@@ -190,8 +190,13 @@ func (ip *ImageProcessor) ProcessImagesForReview(useBuffer bool) error {
 	return nil
 }
 
+/*
+RestoreFromReview restores all novel dupes back to the working
+directory, then deletes the dupe review folder and all its
+contents (the remaining dupes).
+*/
 func (ip *ImageProcessor) RestoreFromReview() error {
-	for _, path := range ip.DupeRestorePaths {
+	for _, path := range ip.NovelDupePaths {
 		err := os.Rename(
 			path,
 			filepath.Join(ip.WorkingDir, filepath.Base(path)),

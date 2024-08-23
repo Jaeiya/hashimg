@@ -137,7 +137,7 @@ func (m TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.workErr.err = err
 			return m.Update(msg)
 		}
-		go m.imgProcessor.Update()
+		go m.imgProcessor.UpdateImages()
 		return m, m.pollProgressStatus()
 
 	case StateProgressing:

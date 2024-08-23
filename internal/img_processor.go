@@ -27,7 +27,7 @@ type ImageProcessor struct {
 	hashLength       int
 	imageMap         ImageMap
 	ProcessTime      time.Duration
-	FilteredImages   *FilteredImages
+	processedImages  *ProcessedImages
 }
 
 type ImageProcessorConfig struct {
@@ -39,9 +39,9 @@ type ImageProcessorConfig struct {
 	OpenReviewFolder bool
 }
 
-type FilteredImages struct {
-	NewHashesMap map[string]HashInfo
-	DupeMap      map[string][]HashInfo
+type ProcessedImages struct {
+	NewImagesByHash  map[string]HashInfo
+	DupeImagesByHash map[string][]HashInfo
 }
 
 func NewImageProcessor(cfg ImageProcessorConfig) *ImageProcessor {
@@ -61,11 +61,11 @@ func NewImageProcessor(cfg ImageProcessorConfig) *ImageProcessor {
 }
 
 func (ip *ImageProcessor) ProcessAll(useBuffer bool) error {
-	err := ip.ProcessHash(useBuffer)
+	err := ip.Process(useBuffer)
 	if err != nil {
 		return err
 	}
-	return ip.Update()
+	return ip.UpdateImages()
 }
 
 /*
@@ -74,7 +74,7 @@ all duplicate images to a temporary folder for the user to review.
 The folder is automatically opened after the images are moved.
 */
 func (ip *ImageProcessor) ProcessHashReview(useBuffer bool) error {
-	err := ip.ProcessHash(useBuffer)
+	err := ip.Process(useBuffer)
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func (ip *ImageProcessor) ProcessHashReview(useBuffer bool) error {
 	}
 
 	ip.isReviewProcess = true
-	fi := ip.FilteredImages
+	pi := ip.processedImages
 
 	err = os.MkdirAll(ip.dupeReviewFolder, os.ModeDir|os.ModeAppend)
 	if err != nil {
@@ -92,7 +92,7 @@ func (ip *ImageProcessor) ProcessHashReview(useBuffer bool) error {
 	}
 
 	cachedImageCount := 0
-	for _, dupes := range fi.DupeMap {
+	for _, dupes := range pi.DupeImagesByHash {
 		for i, dupe := range dupes {
 			ext := filepath.Ext(dupe.path)
 			reviewFileName := fmt.Sprintf("%s_%d%s", dupe.hash, i+1, ext)
@@ -113,14 +113,14 @@ func (ip *ImageProcessor) ProcessHashReview(useBuffer bool) error {
 					filepath.Join(ip.dupeReviewFolder, reviewFileName),
 				)
 				dupe.path = filepath.Join(ip.WorkingDir, reviewFileName)
-				fi.NewHashesMap[dupe.hash] = dupe
+				pi.NewImagesByHash[dupe.hash] = dupe
 				continue
 			}
 			ip.Status.DupeImageCount += 1
 		}
 	}
 
-	ip.Status.NewImageCount = int32(len(fi.NewHashesMap) - cachedImageCount)
+	ip.Status.NewImageCount = int32(len(pi.NewImagesByHash) - cachedImageCount)
 
 	if ip.OpenReviewFolder {
 		utils.OpenFolder(ip.dupeReviewFolder)
@@ -143,11 +143,11 @@ func (ip *ImageProcessor) RestoreFromReview() error {
 }
 
 /*
-ProcessHash calculates the hash of all images in the image map and
+Process calculates the hash of all images in the image map and
 separates out the duplicates from the new images. The result is
-saved to the filteredImages field.
+saved to a field within the image processor.
 */
-func (ip *ImageProcessor) ProcessHash(useBuffer bool) error {
+func (ip *ImageProcessor) Process(useBuffer bool) error {
 	timeStart := time.Now()
 	defer func() { ip.ProcessTime = time.Since(timeStart) }()
 
@@ -164,22 +164,54 @@ func (ip *ImageProcessor) ProcessHash(useBuffer bool) error {
 		return err
 	}
 
-	hashResult, err := ip.hashImages(bufferSize)
+	hashResult, err := ip.calcImageHashes(bufferSize)
 	if err != nil {
 		ip.Status.HashErr = err
 		return err
 	}
 
-	ip.FilteredImages = ip.filterImages(hashResult)
+	start := time.Now()
+	defer func() { ip.Status.FilterTook = time.Since(start) }()
+
+	newImagesByHash := map[string]HashInfo{}
+	dupeImageByHash := map[string][]HashInfo{}
+
+	for _, hashInfo := range hashResult.newHashesInfo {
+		if _, isDupe := dupeImageByHash[hashInfo.hash]; isDupe {
+			dupeImageByHash[hashInfo.hash] = append(dupeImageByHash[hashInfo.hash], hashInfo)
+			delete(newImagesByHash, hashInfo.hash)
+			continue
+		}
+
+		if oldInfo, isDupe := hashResult.oldHashesInfo[hashInfo.hash]; isDupe {
+			oldInfo.isNovel = true
+			dupeImageByHash[oldInfo.hash] = []HashInfo{oldInfo, hashInfo}
+			delete(newImagesByHash, hashInfo.hash)
+			continue
+		}
+
+		if newInfo, isDupe := newImagesByHash[hashInfo.hash]; isDupe {
+			newInfo.isNovel = true
+			dupeImageByHash[newInfo.hash] = []HashInfo{newInfo, hashInfo}
+			delete(newImagesByHash, hashInfo.hash)
+			continue
+		}
+
+		newImagesByHash[hashInfo.hash] = hashInfo
+	}
+
+	ip.HasDupes = len(dupeImageByHash) > 0
+
+	ip.processedImages = &ProcessedImages{newImagesByHash, dupeImageByHash}
 	return nil
 }
 
 /*
-Update handles renaming and deleting images that have had their hashes
+UpdateImages handles renaming and deleting images that have had their hashes
 processed. If the type of process was a "review", then it ONLY renames
 the images.
 */
-func (ip *ImageProcessor) Update() error {
+func (ip *ImageProcessor) UpdateImages() error {
 	timeStart := time.Now()
 	defer func() { ip.ProcessTime = ip.ProcessTime + time.Since(timeStart) }()
 
@@ -224,7 +256,7 @@ func (ip *ImageProcessor) calcBufferSize(useBuffer bool) (int64, error) {
 	return totalSize / int64(len(files)), nil
 }
 
-func (ip *ImageProcessor) hashImages(bufferSize int64) (HashResult, error) {
+func (ip *ImageProcessor) calcImageHashes(bufferSize int64) (HashResult, error) {
 	start := time.Now()
 	defer func() { ip.Status.HashingTook = time.Since(start) }()
 
@@ -265,85 +297,48 @@ func (ip *ImageProcessor) hashImages(bufferSize int64) (HashResult, error) {
 	return hr, nil
 }
 
-func (ip *ImageProcessor) filterImages(hr HashResult) *FilteredImages {
-	start := time.Now()
-	defer func() { ip.Status.FilterTook = time.Since(start) }()
-
-	newImagesMap := map[string]HashInfo{}
-	dupeImageMap := map[string][]HashInfo{}
-
-	for _, hashInfo := range hr.newHashesInfo {
-		if _, isDupe := dupeImageMap[hashInfo.hash]; isDupe {
-			dupeImageMap[hashInfo.hash] = append(dupeImageMap[hashInfo.hash], hashInfo)
-			delete(newImagesMap, hashInfo.hash)
-			continue
-		}
-
-		if oldInfo, isDupe := hr.oldHashesInfo[hashInfo.hash]; isDupe {
-			oldInfo.isNovel = true
-			dupeImageMap[oldInfo.hash] = []HashInfo{oldInfo, hashInfo}
-			delete(newImagesMap, hashInfo.hash)
-			continue
-		}
-
-		if newInfo, isDupe := newImagesMap[hashInfo.hash]; isDupe {
-			newInfo.isNovel = true
-			dupeImageMap[newInfo.hash] = []HashInfo{newInfo, hashInfo}
-			delete(newImagesMap, hashInfo.hash)
-			continue
-		}
-
-		newImagesMap[hashInfo.hash] = hashInfo
-	}
-
-	ip.HasDupes = len(dupeImageMap) > 0
-
-	return &FilteredImages{
-		NewHashesMap: newImagesMap,
-		DupeMap:      dupeImageMap,
-	}
-}
-
 func (ip *ImageProcessor) deleteAndRename() error {
 	if ip.isReviewProcess {
 		return fmt.Errorf("you must use renameOnly() when using review process")
 	}
 
-	if ip.FilteredImages == nil {
+	if ip.processedImages == nil {
 		return fmt.Errorf("cannot update images: hashes have not been processed")
 	}
 
 	start := time.Now()
-	fi := ip.FilteredImages
 	defer func() {
 		ip.Status.UpdatingTook = time.Since(start)
 	}()
 
-	if len(fi.DupeMap) == 0 && len(fi.NewHashesMap) == 0 {
+	newImages := ip.processedImages.NewImagesByHash
+	dupeImages := ip.processedImages.DupeImagesByHash
+
+	if len(dupeImages) == 0 && len(newImages) == 0 {
 		return nil
 	}
 
-	for _, dupes := range fi.DupeMap {
+	for _, dupes := range dupeImages {
 		for i, dupe := range dupes {
 			if dupe.cached {
 				continue
 			}
-			// Save all novel images
 			if dupe.isNovel {
-				fi.DupeMap[dupe.hash] = dupes[i+1:]
-				fi.NewHashesMap[dupe.hash] = dupe
+				// All novel images are at index 0
+				dupeImages[dupe.hash] = dupes[i+1:]
+				newImages[dupe.hash] = dupe
 				continue
 			}
 			ip.Status.DupeImageCount += 1
 		}
 	}
 
-	ip.Status.NewImageCount = int32(len(fi.NewHashesMap))
-	ip.Status.MaxUpdateProgress = ip.Status.DupeImageCount + int32(len(fi.NewHashesMap))
+	ip.Status.NewImageCount = int32(len(newImages))
+	ip.Status.MaxUpdateProgress = ip.Status.DupeImageCount + int32(len(newImages))
 
 	tp, err := utils.NewThreadPool(
 		runtime.NumCPU(),
-		max(len(fi.DupeMap)+len(fi.NewHashesMap), 10),
+		max(len(dupeImages)+len(newImages), 10),
 		false,
 	)
 	if err != nil {
@@ -352,7 +347,7 @@ func (ip *ImageProcessor) deleteAndRename() error {
 
 	errors := []error{}
 
-	for _, dupes := range fi.DupeMap {
+	for _, dupes := range dupeImages {
 		for _, dupe := range dupes {
 			if dupe.cached {
 				continue
@@ -369,7 +364,7 @@ func (ip *ImageProcessor) deleteAndRename() error {
 		}
 	}
 
-	for newImgHash, hashInfo := range fi.NewHashesMap {
+	for newImgHash, hashInfo := range newImages {
 		tp.Queue(func() {
 			err := ip.renameImages(hashInfo, newImgHash)
 			if err != nil {
@@ -390,11 +385,11 @@ func (ip *ImageProcessor) deleteAndRename() error {
 }
 
 func (ip *ImageProcessor) renameOnly() error {
-	fi := ip.FilteredImages
+	pi := ip.processedImages
 
 	tp, err := utils.NewThreadPool(
 		runtime.NumCPU(),
-		max(len(fi.DupeMap)+len(fi.NewHashesMap), 10),
+		max(len(pi.DupeImagesByHash)+len(pi.NewImagesByHash), 10),
 		false,
 	)
 	if err != nil {
@@ -402,9 +397,9 @@ func (ip *ImageProcessor) renameOnly() error {
 	}
 
 	errors := []error{}
-	ip.Status.MaxUpdateProgress = int32(len(fi.NewHashesMap))
+	ip.Status.MaxUpdateProgress = int32(len(pi.NewImagesByHash))
 
-	for newImgHash, hashInfo := range fi.NewHashesMap {
+	for newImgHash, hashInfo := range pi.NewImagesByHash {
 		tp.Queue(func() {
 			err := ip.renameImages(hashInfo, newImgHash)
 			if err != nil {

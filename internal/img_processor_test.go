@@ -446,7 +446,7 @@ func TestReviewProcess(t *testing.T) {
 				HashLength: hashLength,
 			})
 
-			err = imgProcessor.ProcessHashReview(false)
+			err = imgProcessor.ProcessImagesForReview(false)
 			require.NoError(t, err, "process hashes and move files without error")
 
 			// The dupes are handled by the restoration method
@@ -551,7 +551,7 @@ func TestReviewRestoration(t *testing.T) {
 			HashLength: hashLength,
 		})
 
-		err = imgProcessor.ProcessHashReview(false)
+		err = imgProcessor.ProcessImagesForReview(false)
 		require.NoError(t, err)
 
 		err = imgProcessor.RestoreFromReview()

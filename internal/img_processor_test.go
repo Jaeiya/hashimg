@@ -200,6 +200,11 @@ func TestImageProcessor(t *testing.T) {
 			err = imgProcessor.ProcessAll(false)
 			a.NoError(err)
 
+			a.True(
+				imgProcessor.Status.UpdatingComplete,
+				"updating should have a completed status",
+			)
+
 			a.Equal(
 				d.expectDupeCount,
 				imgProcessor.Status.DupeImageCount,
@@ -448,6 +453,8 @@ func TestReviewProcess(t *testing.T) {
 
 			err = imgProcessor.ProcessImagesForReview(false)
 			require.NoError(t, err, "process hashes and move files without error")
+
+			a.True(imgProcessor.Status.ProcessingComplete, "processing should be complete")
 
 			// The dupes are handled by the restoration method
 			a.Equal(

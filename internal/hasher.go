@@ -19,6 +19,10 @@ type HashResult struct {
 }
 
 type HashInfo struct {
+	// Indicates a new image that has duplicates. It should be
+	// restored as a new image after its dupes have been
+	// processed. Cached images are exempt from this
+	// requirement, but are always novel.
 	isNovel bool
 	hash    string
 	path    string

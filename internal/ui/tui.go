@@ -152,8 +152,9 @@ func (m TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateProgress(msg)
 
 	default:
-		panic(fmt.Sprintf("unknown state: %d", m.state))
-
+		// We don't panic because it handles all possible events
+		// including mouse & window events.
+		return m, nil
 	}
 }
 

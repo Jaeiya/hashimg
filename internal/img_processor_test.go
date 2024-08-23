@@ -17,13 +17,21 @@ type MockImgProcData struct {
 	fileContent []string
 	expectFiles []string
 
-	// Used for review process
+	expectUpdateProgress int32
+
+	//###########################
+	// The following are review process fields
+	//###########################
 
 	dupeFiles        []string
 	dupeContent      []string
 	expectDupeFiles  []string
 	expectImageCount int32
-	expectDupeCount  int32
+
+	expectDupeCount int32
+	// Should only tally new images because dupes are handled by the
+	// restoration method.
+	expectMaxUpdateProgress int32
 }
 
 const hashLength = 32
@@ -47,9 +55,10 @@ func TestImageProcessor(t *testing.T) {
 
 	md := []MockImgProcData{
 		{
-			should:      "lowercase extension",
-			files:       []string{"test1.PNG", "test2.JPG"},
-			fileContent: []string{"test1", "test2"},
+			should:               "lowercase extension",
+			files:                []string{"test1.PNG", "test2.JPG"},
+			fileContent:          []string{"test1", "test2"},
+			expectUpdateProgress: 2,
 			expectFiles: []string{
 				"0x@1b4f0e9851971998e732078544c96b36.png",
 				"0x@60303ae22b998861bce3b28f33eec1be.jpg",
@@ -63,7 +72,8 @@ func TestImageProcessor(t *testing.T) {
 				"test3.png",
 				"test4.bmp",
 			},
-			fileContent: []string{"test1", "test2", "test3", "test4"},
+			fileContent:          []string{"test1", "test2", "test3", "test4"},
+			expectUpdateProgress: 3,
 			expectFiles: []string{
 				"0x@1b4f0e9851971998e732078544c96b36.png",
 				"0x@60303ae22b998861bce3b28f33eec1be.png",
@@ -93,6 +103,7 @@ func TestImageProcessor(t *testing.T) {
 				"test4",
 				"test4",
 			},
+			expectUpdateProgress: 8,
 			expectFiles: []string{
 				"0x@1b4f0e9851971998e732078544c96b36.png",
 				"0x@a4e624d686e03ed2767c0abd85c14426.bmp",
@@ -140,6 +151,7 @@ func TestImageProcessor(t *testing.T) {
 				"test15",
 				"bad_file3",
 			},
+			expectUpdateProgress: 14,
 			expectFiles: []string{
 				"0x@fd61a03af4f77d870fc21e05e7e80678.png",
 				"0x@60303ae22b998861bce3b28f33eec1be.png",
@@ -184,6 +196,17 @@ func TestImageProcessor(t *testing.T) {
 			err = imgProcessor.ProcessAll(false)
 			a.NoError(err)
 
+			a.Equal(
+				d.expectUpdateProgress,
+				imgProcessor.Status.UpdateProgress,
+				"update progress should be reliable",
+			)
+			a.Equal(
+				d.expectUpdateProgress,
+				imgProcessor.Status.MaxUpdateProgress,
+				"total update progress should always equal max",
+			)
+
 			fileNames, err = readDir(dir)
 			a.NoError(err)
 			for _, fn := range fileNames {
@@ -200,11 +223,12 @@ func TestReviewProcess(t *testing.T) {
 
 	md := []MockImgProcData{
 		{
-			should:           "move duplicate new files",
-			dupeFiles:        []string{"t0.jpg", "t1.jpg"},
-			dupeContent:      []string{"0", "0"},
-			expectDupeCount:  1,
-			expectImageCount: 1,
+			should:                  "move duplicate new files",
+			dupeFiles:               []string{"t0.jpg", "t1.jpg"},
+			dupeContent:             []string{"0", "0"},
+			expectDupeCount:         1,
+			expectImageCount:        1,
+			expectMaxUpdateProgress: 1,
 			expectDupeFiles: []string{
 				fmt.Sprintf("%s_1.jpg", calcSha256("0")),
 				fmt.Sprintf("%s_2.jpg", calcSha256("0")),
@@ -221,9 +245,10 @@ func TestReviewProcess(t *testing.T) {
 				"t5.jpg",
 				"t6.jpg",
 			},
-			dupeContent:      []string{"0", "0", "0", "0", "1", "1", "1"},
-			expectImageCount: 2,
-			expectDupeCount:  5,
+			dupeContent:             []string{"0", "0", "0", "0", "1", "1", "1"},
+			expectImageCount:        2,
+			expectDupeCount:         5,
+			expectMaxUpdateProgress: 2,
 			expectDupeFiles: []string{
 				fmt.Sprintf("%s_1.jpg", calcSha256("0")),
 				fmt.Sprintf("%s_2.jpg", calcSha256("0")),
@@ -240,9 +265,10 @@ func TestReviewProcess(t *testing.T) {
 				fmt.Sprintf("0x@%s.jpg", calcSha256("0")),
 				"t0.jpg",
 			},
-			expectImageCount: 0,
-			expectDupeCount:  1,
-			dupeContent:      []string{"0", "0"},
+			expectImageCount:        0,
+			expectDupeCount:         1,
+			expectMaxUpdateProgress: 0,
+			dupeContent:             []string{"0", "0"},
 			expectDupeFiles: []string{
 				fmt.Sprintf("%s_1.jpg", calcSha256("0")),
 				fmt.Sprintf("%s_2.jpg", calcSha256("0")),
@@ -288,8 +314,9 @@ func TestReviewProcess(t *testing.T) {
 				"3",
 				"3",
 			},
-			expectImageCount: 1,
-			expectDupeCount:  13,
+			expectImageCount:        1,
+			expectDupeCount:         13,
+			expectMaxUpdateProgress: 1,
 			expectDupeFiles: []string{
 				fmt.Sprintf("%s_1.jpg", calcSha256("0")),
 				fmt.Sprintf("%s_2.jpg", calcSha256("0")),
@@ -347,8 +374,9 @@ func TestReviewProcess(t *testing.T) {
 				"4",
 				"4",
 			},
-			expectImageCount: 3,
-			expectDupeCount:  3,
+			expectImageCount:        3,
+			expectDupeCount:         3,
+			expectMaxUpdateProgress: 3,
 			expectDupeFiles: []string{
 				fmt.Sprintf("%s_1.jpg", calcSha256("3")),
 				fmt.Sprintf("%s_2.jpg", calcSha256("3")),
@@ -369,13 +397,14 @@ func TestReviewProcess(t *testing.T) {
 				"1",
 				"2",
 			},
+			expectImageCount:        0,
+			expectDupeCount:         0,
+			expectMaxUpdateProgress: 0,
 			expectFiles: []string{
 				fmt.Sprintf("0x@%s.jpg", calcSha256("0")),
 				fmt.Sprintf("0x@%s.jpg", calcSha256("1")),
 				fmt.Sprintf("0x@%s.jpg", calcSha256("2")),
 			},
-			expectImageCount: 0,
-			expectDupeCount:  0,
 		},
 	}
 	_ = md
@@ -409,6 +438,13 @@ func TestReviewProcess(t *testing.T) {
 
 			err = imgProcessor.ProcessHashReview(false)
 			require.NoError(t, err, "process hashes and move files without error")
+
+			// The dupes are handled by the restoration method
+			a.Equal(
+				d.expectMaxUpdateProgress,
+				imgProcessor.Status.NewImageCount,
+				"total new images should match the max update progress",
+			)
 
 			if hasDupes {
 				_, err = os.Stat(filepath.Join(dir, "__dupes"))

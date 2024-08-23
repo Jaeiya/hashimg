@@ -45,6 +45,18 @@ the data isn't also identical. If most of your images are duplicates simply beca
 than others, then this program is not the right tool; however if you have a lot of exact copies of
 images in a folder, then this program is perfect.
 
+### I don't trust you...
+
+It can be a big ask to trust a relatively random piece of software to process your important images,
+so in light of that, you also have the option to review the duplicate images before deletion.
+After processing your images, the program will ask you if you want to keep them; it's entirely
+up to you!
+
+If you've chosen to review your images, then a `__dupes` folder will be created in the current
+directory for the dupes. This folder will be automagically opened for you to review. If you **do**
+decide to keep the duplicate images, the update process will abort and you can do whatever you
+want with the duplicate images in the `__dupes` folder.
+
 ### Installing
 
 You can download this app in multiple flavors (platforms) from the [Releases] page. It supports Windows,

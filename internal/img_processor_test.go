@@ -17,6 +17,7 @@ type MockImgProcData struct {
 	fileContent []string
 	expectFiles []string
 
+	expectDupeCount      int32
 	expectUpdateProgress int32
 
 	//###########################
@@ -28,7 +29,6 @@ type MockImgProcData struct {
 	expectDupeFiles  []string
 	expectImageCount int32
 
-	expectDupeCount int32
 	// Should only tally new images because dupes are handled by the
 	// restoration method.
 	expectMaxUpdateProgress int32
@@ -59,6 +59,7 @@ func TestImageProcessor(t *testing.T) {
 			files:                []string{"test1.PNG", "test2.JPG"},
 			fileContent:          []string{"test1", "test2"},
 			expectUpdateProgress: 2,
+			expectDupeCount:      0,
 			expectFiles: []string{
 				"0x@1b4f0e9851971998e732078544c96b36.png",
 				"0x@60303ae22b998861bce3b28f33eec1be.jpg",
@@ -74,6 +75,7 @@ func TestImageProcessor(t *testing.T) {
 			},
 			fileContent:          []string{"test1", "test2", "test3", "test4"},
 			expectUpdateProgress: 3,
+			expectDupeCount:      0,
 			expectFiles: []string{
 				"0x@1b4f0e9851971998e732078544c96b36.png",
 				"0x@60303ae22b998861bce3b28f33eec1be.png",
@@ -104,6 +106,7 @@ func TestImageProcessor(t *testing.T) {
 				"test4",
 			},
 			expectUpdateProgress: 8,
+			expectDupeCount:      6,
 			expectFiles: []string{
 				"0x@1b4f0e9851971998e732078544c96b36.png",
 				"0x@a4e624d686e03ed2767c0abd85c14426.bmp",
@@ -152,6 +155,7 @@ func TestImageProcessor(t *testing.T) {
 				"bad_file3",
 			},
 			expectUpdateProgress: 14,
+			expectDupeCount:      5,
 			expectFiles: []string{
 				"0x@fd61a03af4f77d870fc21e05e7e80678.png",
 				"0x@60303ae22b998861bce3b28f33eec1be.png",
@@ -195,6 +199,12 @@ func TestImageProcessor(t *testing.T) {
 			})
 			err = imgProcessor.ProcessAll(false)
 			a.NoError(err)
+
+			a.Equal(
+				d.expectDupeCount,
+				imgProcessor.Status.DupeImageCount,
+				"dupe count should be reliable",
+			)
 
 			a.Equal(
 				d.expectUpdateProgress,

@@ -13,6 +13,8 @@ import (
 	"github.com/jaeiya/hashimg/internal/utils"
 )
 
+var mux = sync.Mutex{}
+
 type ImageProcessor struct {
 	Status           *models.ProcessStatus
 	WorkingDir       string
@@ -349,7 +351,6 @@ func (ip *ImageProcessor) deleteAndRename() error {
 	}
 
 	errors := []error{}
-	mux := sync.Mutex{}
 
 	for _, dupes := range fi.DupeMap {
 		for _, dupe := range dupes {
@@ -370,11 +371,7 @@ func (ip *ImageProcessor) deleteAndRename() error {
 
 	for newImgHash, hashInfo := range fi.NewHashesMap {
 		tp.Queue(func() {
-			dir := filepath.Dir(hashInfo.path)
-			// Uppercase extensions are ugly and inconsistent
-			ext := strings.ToLower(filepath.Ext(hashInfo.path))
-			newFileName := filepath.Join(dir, ip.hashPrefix+newImgHash+ext)
-			err := os.Rename(hashInfo.path, newFileName)
+			err := ip.renameImages(hashInfo, newImgHash)
 			if err != nil {
 				mux.Lock()
 				errors = append(errors, err)
@@ -404,17 +401,12 @@ func (ip *ImageProcessor) renameOnly() error {
 		return err
 	}
 
-	mux := sync.Mutex{}
 	errors := []error{}
 	ip.Status.MaxUpdateProgress = int32(len(fi.NewHashesMap))
 
 	for newImgHash, hashInfo := range fi.NewHashesMap {
 		tp.Queue(func() {
-			dir := filepath.Dir(hashInfo.path)
-			// Uppercase extensions are ugly and inconsistent
-			ext := strings.ToLower(filepath.Ext(hashInfo.path))
-			newFileName := filepath.Join(dir, ip.hashPrefix+newImgHash+ext)
-			err := os.Rename(hashInfo.path, newFileName)
+			err := ip.renameImages(hashInfo, newImgHash)
 			if err != nil {
 				mux.Lock()
 				errors = append(errors, err)
@@ -430,6 +422,18 @@ func (ip *ImageProcessor) renameOnly() error {
 		return errors[0]
 	}
 
+	return nil
+}
+
+func (ip *ImageProcessor) renameImages(hi HashInfo, newImgHash string) error {
+	dir := filepath.Dir(hi.path)
+	// Uppercase extensions are ugly and inconsistent
+	ext := strings.ToLower(filepath.Ext(hi.path))
+	newFileName := filepath.Join(dir, ip.hashPrefix+newImgHash+ext)
+	err := os.Rename(hi.path, newFileName)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

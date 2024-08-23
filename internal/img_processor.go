@@ -65,7 +65,7 @@ ProcessImages calculates the hash of all images in the image map and
 separates out the duplicates from the new images.
 
 🟡 The result is saved to a field within the image processor.
-This allows us to call UpdateImages() without a dependency.
+This allows us to call the update method without a dependency.
 */
 func (ip *ImageProcessor) ProcessImages(useBuffer bool) error {
 	timeStart := time.Now()

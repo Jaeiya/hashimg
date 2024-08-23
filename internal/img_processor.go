@@ -61,7 +61,7 @@ func NewImageProcessor(cfg ImageProcessorConfig) *ImageProcessor {
 }
 
 func (ip *ImageProcessor) ProcessAll(useBuffer bool) error {
-	err := ip.Process(useBuffer)
+	err := ip.ProcessImages(useBuffer)
 	if err != nil {
 		return err
 	}
@@ -74,7 +74,7 @@ all duplicate images to a temporary folder for the user to review.
 The folder is automatically opened after the images are moved.
 */
 func (ip *ImageProcessor) ProcessHashReview(useBuffer bool) error {
-	err := ip.Process(useBuffer)
+	err := ip.ProcessImages(useBuffer)
 	if err != nil {
 		return err
 	}
@@ -143,11 +143,13 @@ func (ip *ImageProcessor) RestoreFromReview() error {
 }
 
 /*
-Process calculates the hash of all images in the image map and
-separates out the duplicates from the new images. The result is
-saved to a field within the image processor.
+ProcessImages calculates the hash of all images in the image map and
+separates out the duplicates from the new images.
+
+🟡 The result is saved to a field within the image processor.
+This allows us to call UpdateImages() without a dependency.
 */
-func (ip *ImageProcessor) Process(useBuffer bool) error {
+func (ip *ImageProcessor) ProcessImages(useBuffer bool) error {
 	timeStart := time.Now()
 	defer func() { ip.ProcessTime = time.Since(timeStart) }()
 

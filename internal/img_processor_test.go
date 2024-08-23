@@ -49,7 +49,7 @@ func TestImageProcessor(t *testing.T) {
 			ImageMap:   ImageMap{},
 			HashLength: hashLength,
 		})
-		err := imgProcessor.ProcessAll(false)
+		err := imgProcessor.ProcessImages(false)
 		a.ErrorIs(err, ErrNoImages)
 	})
 
@@ -197,8 +197,9 @@ func TestImageProcessor(t *testing.T) {
 				ImageMap:   iMap,
 				HashLength: hashLength,
 			})
-			err = imgProcessor.ProcessAll(false)
+			err = imgProcessor.ProcessImages(false)
 			a.NoError(err)
+			err = imgProcessor.UpdateImages()
 
 			a.True(
 				imgProcessor.Status.UpdatingComplete,

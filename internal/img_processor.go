@@ -60,12 +60,73 @@ func NewImageProcessor(cfg ImageProcessorConfig) *ImageProcessor {
 	}
 }
 
-func (ip *ImageProcessor) ProcessAll(useBuffer bool) error {
-	err := ip.ProcessImages(useBuffer)
+/*
+ProcessImages calculates the hash of all images in the image map and
+separates out the duplicates from the new images.
+
+🟡 The result is saved to a field within the image processor.
+This allows us to call UpdateImages() without a dependency.
+*/
+func (ip *ImageProcessor) ProcessImages(useBuffer bool) error {
+	timeStart := time.Now()
+	defer func() {
+		ip.ProcessTime = time.Since(timeStart)
+		ip.Status.ProcessingComplete = true
+	}()
+
+	if len(ip.imageMap) == 0 {
+		return ErrNoImages
+	}
+
+	ip.Status.TotalImageCount = int32(len(ip.imageMap))
+	ip.Status.MaxHashProgress = ip.Status.TotalImageCount
+
+	bufferSize, err := ip.calcBufferSize(useBuffer)
 	if err != nil {
+		ip.Status.HashErr = err
 		return err
 	}
-	return ip.UpdateImages()
+
+	hashResult, err := ip.calcImageHashes(bufferSize)
+	if err != nil {
+		ip.Status.HashErr = err
+		return err
+	}
+
+	start := time.Now()
+	defer func() { ip.Status.FilterTook = time.Since(start) }()
+
+	newImagesByHash := map[string]HashInfo{}
+	dupeImagesByHash := map[string][]HashInfo{}
+
+	for _, hashInfo := range hashResult.newHashesInfo {
+		if _, isDupe := dupeImagesByHash[hashInfo.hash]; isDupe {
+			dupeImagesByHash[hashInfo.hash] = append(dupeImagesByHash[hashInfo.hash], hashInfo)
+			delete(newImagesByHash, hashInfo.hash)
+			continue
+		}
+
+		if oldInfo, isDupe := hashResult.oldHashesInfo[hashInfo.hash]; isDupe {
+			oldInfo.isNovel = true
+			dupeImagesByHash[oldInfo.hash] = []HashInfo{oldInfo, hashInfo}
+			delete(newImagesByHash, hashInfo.hash)
+			continue
+		}
+
+		if newInfo, isDupe := newImagesByHash[hashInfo.hash]; isDupe {
+			newInfo.isNovel = true
+			dupeImagesByHash[newInfo.hash] = []HashInfo{newInfo, hashInfo}
+			delete(newImagesByHash, hashInfo.hash)
+			continue
+		}
+
+		newImagesByHash[hashInfo.hash] = hashInfo
+	}
+
+	ip.HasDupes = len(dupeImagesByHash) > 0
+
+	ip.processedImages = &ProcessedImages{newImagesByHash, dupeImagesByHash}
+	return nil
 }
 
 /*
@@ -140,75 +201,6 @@ func (ip *ImageProcessor) RestoreFromReview() error {
 		}
 	}
 	return os.RemoveAll(ip.dupeReviewFolder)
-}
-
-/*
-ProcessImages calculates the hash of all images in the image map and
-separates out the duplicates from the new images.
-
-🟡 The result is saved to a field within the image processor.
-This allows us to call UpdateImages() without a dependency.
-*/
-func (ip *ImageProcessor) ProcessImages(useBuffer bool) error {
-	timeStart := time.Now()
-	defer func() {
-		ip.ProcessTime = time.Since(timeStart)
-		ip.Status.ProcessingComplete = true
-	}()
-
-	if len(ip.imageMap) == 0 {
-		return ErrNoImages
-	}
-
-	ip.Status.TotalImageCount = int32(len(ip.imageMap))
-	ip.Status.MaxHashProgress = ip.Status.TotalImageCount
-
-	bufferSize, err := ip.calcBufferSize(useBuffer)
-	if err != nil {
-		ip.Status.HashErr = err
-		return err
-	}
-
-	hashResult, err := ip.calcImageHashes(bufferSize)
-	if err != nil {
-		ip.Status.HashErr = err
-		return err
-	}
-
-	start := time.Now()
-	defer func() { ip.Status.FilterTook = time.Since(start) }()
-
-	newImagesByHash := map[string]HashInfo{}
-	dupeImagesByHash := map[string][]HashInfo{}
-
-	for _, hashInfo := range hashResult.newHashesInfo {
-		if _, isDupe := dupeImagesByHash[hashInfo.hash]; isDupe {
-			dupeImagesByHash[hashInfo.hash] = append(dupeImagesByHash[hashInfo.hash], hashInfo)
-			delete(newImagesByHash, hashInfo.hash)
-			continue
-		}
-
-		if oldInfo, isDupe := hashResult.oldHashesInfo[hashInfo.hash]; isDupe {
-			oldInfo.isNovel = true
-			dupeImagesByHash[oldInfo.hash] = []HashInfo{oldInfo, hashInfo}
-			delete(newImagesByHash, hashInfo.hash)
-			continue
-		}
-
-		if newInfo, isDupe := newImagesByHash[hashInfo.hash]; isDupe {
-			newInfo.isNovel = true
-			dupeImagesByHash[newInfo.hash] = []HashInfo{newInfo, hashInfo}
-			delete(newImagesByHash, hashInfo.hash)
-			continue
-		}
-
-		newImagesByHash[hashInfo.hash] = hashInfo
-	}
-
-	ip.HasDupes = len(dupeImagesByHash) > 0
-
-	ip.processedImages = &ProcessedImages{newImagesByHash, dupeImagesByHash}
-	return nil
 }
 
 /*

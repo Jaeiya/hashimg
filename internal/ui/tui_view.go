@@ -152,7 +152,7 @@ func (m TuiModel) viewUserReviewSelection() string {
 		func() bool {
 			return m.keepDupes
 		},
-	) + fmt.Sprintf("\n%d\n", m.state)
+	)
 }
 
 func (m TuiModel) viewProgress() string {

@@ -67,18 +67,33 @@ After you download the version you want, you can extract it to any folder you li
 from a terminal pointing at that directory. The best way to use this application is to set it up in
 your global `PATH` environment variable; that way it can be accessed from any folder in your terminal.
 
-### Build Instructions
+## Build Instructions
 
-You'll need to have Go `1.22.5` or higher installed.
+You'll need to have Go `1.22.5` or higher installed. If you're using `1.23.x` or higher - as of
+2024-08-25 - you will end up with significantly larger binaries. Not sure if that's a feature
+or a bug, but...that's how it is.
 
-You can download the source and build this for either Windows or Linux, using their respective build
-scripts `build.bat` (for Windows) or `build.sh` (for Linux). They will both build to `/bin/hashimg.exe`.
+All of the following builds are technically production builds, in terms of how the binaries are
+optimized. Even if you build using the `dev` target, you're still getting the most optimized
+build possible.
 
-### Expectations
+### Build development artifacts to dist dir
 
-As of right now, this program is feature complete. It has all the bells and whistles that I wanted
-to add to it, and seems to be quite quick for what it does. I don't plan on adding any more features
-but I'm always open to performance-critical tweaks.
+This will build 3 binaries, one for each platform (linux, darwin, & windows), all of which are
+`x86_64` compatible.
+
+```bash
+make dev
+```
+
+### Build snapshot of production artifacts to dist dir
+
+This is a preview of how the builds will look in production, however they do use a snapshot
+version, which will not be used when run through the github action.
+
+```bash
+make snapshot
+```
 
 ### Issues
 

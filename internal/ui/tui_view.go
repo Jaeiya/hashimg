@@ -51,7 +51,7 @@ var (
 	}
 
 	footerText = footerStyle.Render(
-		"Hashimg " + internal.AppVersion + " - Press Esc, Ctrl+C, or Q to quit",
+		"Hashimg " + internal.GetVersion() + " - Press Esc, Ctrl+C, or Q to quit",
 	)
 
 	CautionStyle = baseStyle.

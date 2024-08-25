@@ -62,3 +62,5 @@ setup-linux: install-go-linux install-goreleaser
 setup-macos: install-go-macos install-goreleaser
 	@echo You're all set!
 
+dev:
+	goreleaser release --snapshot --clean --config .goreleaser.dev.yml

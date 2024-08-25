@@ -1,5 +1,9 @@
 version: 2
 
+before:
+  hooks:
+    - go mod tidy
+
 builds:
   - id: "upx"
     main: ./cmd/hashimg
@@ -16,6 +20,7 @@ builds:
       - amd64
     goamd64:
       - v2
+      - v3
     hooks:
       post: # Hook to run after the build
         - upx --best --lzma -qq --force-overwrite --force-macos {{ .Path }}
@@ -33,6 +38,21 @@ builds:
       - -s -w -X github.com/jaeiya/hashimg/internal.AppVersion={{ .Tag }}
     goarch:
       - arm64
+    goarm:
+      - "7"
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+archives:
+  - name_template: >-
+      {{ .Binary }}_{{ .Tag }}_{{ .Os }}_
+      {{- if (eq .Arch "amd64") }}x86_64
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if not (eq .Amd64 "v2") }}_{{ .Amd64 }}{{ end }}
+    format_overrides:
+      - goos: windows
+        format: zip
 
 changelog:
   sort: asc
@@ -72,9 +92,3 @@ changelog:
 
     - title: "Other"
       order: 999
-
-archives:
-  - name_template: "{{ .ProjectName }}_{{ .Tag }}_{{ .Os }}_{{ .Arch }}"
-    format_overrides:
-      - goos: windows
-        format: zip

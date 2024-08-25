@@ -51,7 +51,7 @@ var (
 	}
 
 	footerText = fmt.Sprintf(
-		"%s %s %s",
+		"\n%s %s %s",
 		footerStyle.Render("Hashimg"),
 		getPrettyVersion(),
 		lipgloss.NewStyle().

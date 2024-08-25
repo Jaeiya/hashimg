@@ -8,7 +8,7 @@ REM For modern processors
 set GOAMD64=v3
 
 REM Build the Go application with optimization flags
-go build -ldflags="-s -w" -gcflags="all=-B -l=120" -trimpath -o "bin/hashimg.exe" "cmd/hashimg/main.go"
+go build -ldflags="-s -w -X github.com/jaeiya/hashimg/internal.AppVersion=x.x.x" -gcflags="all=-B -l=120" -trimpath -o "bin/hashimg.exe" "cmd/hashimg/main.go"
 
 REM Optionally, you can specify the output binary name
 REM go build -o myapp -ldflags="-s -w" -gcflags="-B" -trimpath

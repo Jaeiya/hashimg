@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/jaeiya/hashimg/internal/utils"
+	"github.com/jaeiya/hashimg/internal"
 )
 
 const (
@@ -51,7 +51,7 @@ var (
 	}
 
 	footerText = footerStyle.Render(
-		"Hashimg " + utils.AppVersion + " - Press Esc, Ctrl+C, or Q to quit",
+		"Hashimg " + internal.AppVersion + " - Press Esc, Ctrl+C, or Q to quit",
 	)
 
 	CautionStyle = baseStyle.

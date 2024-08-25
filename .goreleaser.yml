@@ -22,7 +22,7 @@ builds:
       - "all=-B -l=120"
     ldflags:
       - -s -w
-      - -X github.com/jaeiya/hashimg/internal.appVersion={{ .Tag }}
+      - -X github.com/jaeiya/hashimg/internal.appVersion={{ .Version }}
       - -X github.com/jaeiya/hashimg/internal.commitSha={{ .ShortCommit }}
     goarch:
       - amd64
@@ -78,7 +78,7 @@ builds:
       - "all=-B -l=120"
     ldflags:
       - -s -w
-      - -X github.com/jaeiya/hashimg/internal.appVersion={{ .Tag }}
+      - -X github.com/jaeiya/hashimg/internal.appVersion={{ .Version }}
       - -X github.com/jaeiya/hashimg/internal.commitSha={{ .ShortCommit }}
     goarch:
       - arm64

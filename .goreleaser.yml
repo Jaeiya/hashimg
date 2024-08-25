@@ -103,6 +103,11 @@ archives:
       - upx
 
   - id: windows
+    name_template: >-
+      hashimg_{{ .Tag }}_{{ .Os }}_
+      {{- if (eq .Arch "amd64") }}x86_64
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if not (eq .Amd64 "v2") }}_{{ .Amd64 }}{{ end }}
     builds:
       - upx-windows
     format: binary

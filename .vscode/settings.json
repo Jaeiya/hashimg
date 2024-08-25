@@ -5,6 +5,7 @@
     "gcflags",
     "goamd",
     "goarch",
+    "goarm",
     "goreleaser",
     "Hasher",
     "Hashimg",

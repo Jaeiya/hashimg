@@ -33,7 +33,7 @@ builds:
       - goos: windows
     hooks:
       post: # Hook to run after the build
-        - upx --best --lzma -qq --force-overwrite --force-macos {{ .Path }}
+        - upx --best --lzma -qq --force-macos {{ .Path }}
 
   - id: "upx-windows"
     main: ./cmd/hashimg
@@ -64,7 +64,7 @@ builds:
       - goos: darwin
     hooks:
       post: # Hook to run after the build
-        - upx --best --lzma -qq --force-overwrite {{ .Path }}
+        - upx --best --lzma -qq {{ .Path }}
     no_unique_dist_dir: true
 
   - id: "no-upx"

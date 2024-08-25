@@ -7,7 +7,13 @@ before:
 builds:
   - id: "upx"
     main: ./cmd/hashimg
-    binary: hashimg
+    binary: >-
+      {{- if .IsSnapshot }}hashimg_{{ .ShortCommit }}
+      {{- else }}hashimg_{{ .Tag }}_{{ .Os }}_
+      {{- if (eq .Arch "amd64") }}x86_64
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- end }}
+      {{- if not (eq .Amd64 "v2") }}_{{ .Amd64 }}{{ end }}
     env:
       - CGO_ENABLED=0
     flags:
@@ -15,15 +21,51 @@ builds:
     gcflags:
       - "all=-B -l=120"
     ldflags:
-      - -s -w -X github.com/jaeiya/hashimg/internal.AppVersion={{ .Tag }}
+      - -s -w
+      - -X github.com/jaeiya/hashimg/internal.appVersion={{ .Tag }}
+      - -X github.com/jaeiya/hashimg/internal.commitSha={{ .ShortCommit }}
     goarch:
       - amd64
     goamd64:
       - v2
       - v3
+    ignore:
+      - goos: windows
     hooks:
       post: # Hook to run after the build
         - upx --best --lzma -qq --force-overwrite --force-macos {{ .Path }}
+
+  - id: "upx-windows"
+    main: ./cmd/hashimg
+    binary: >-
+      {{- if .IsSnapshot }}hashimg_{{ .ShortCommit }}
+      {{- else }}hashimg_{{ .Tag }}_{{ .Os }}_
+      {{- if (eq .Arch "amd64") }}x86_64
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- end }}
+      {{- if not (eq .Amd64 "v2") }}_{{ .Amd64 }}{{ end }}
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    gcflags:
+      - "all=-B -l=120"
+    ldflags:
+      - -s -w
+      - -X github.com/jaeiya/hashimg/internal.appVersion={{ .Version }}
+      - -X github.com/jaeiya/hashimg/internal.commitSha={{ .ShortCommit }}
+    goarch:
+      - amd64
+    goamd64:
+      - v2
+      - v3
+    ignore:
+      - goos: linux
+      - goos: darwin
+    hooks:
+      post: # Hook to run after the build
+        - upx --best --lzma -qq --force-overwrite {{ .Path }}
+    no_unique_dist_dir: true
 
   - id: "no-upx"
     main: ./cmd/hashimg
@@ -35,7 +77,9 @@ builds:
     gcflags:
       - "all=-B -l=120"
     ldflags:
-      - -s -w -X github.com/jaeiya/hashimg/internal.AppVersion={{ .Tag }}
+      - -s -w
+      - -X github.com/jaeiya/hashimg/internal.appVersion={{ .Tag }}
+      - -X github.com/jaeiya/hashimg/internal.commitSha={{ .ShortCommit }}
     goarch:
       - arm64
     goarm:
@@ -44,15 +88,28 @@ builds:
       - goos: windows
         goarch: arm64
 
+snapshot:
+  version_template: "#{{ .ShortCommit }}"
+
 archives:
-  - name_template: >-
-      {{ .Binary }}_{{ .Tag }}_{{ .Os }}_
+  - id: unix
+    name_template: >-
+      hashimg_{{ .Tag }}_{{ .Os }}_
       {{- if (eq .Arch "amd64") }}x86_64
       {{- else }}{{ .Arch }}{{ end }}
       {{- if not (eq .Amd64 "v2") }}_{{ .Amd64 }}{{ end }}
-    format_overrides:
-      - goos: windows
-        format: zip
+    builds:
+      - no-upx
+      - upx
+
+  - id: windows
+    builds:
+      - upx-windows
+    format: binary
+    files:
+      - none*
+    wrap_in_directory: false
+    strip_binary_directory: true
 
 changelog:
   sort: asc

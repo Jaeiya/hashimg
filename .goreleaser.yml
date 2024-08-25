@@ -7,13 +7,7 @@ before:
 builds:
   - id: "upx"
     main: ./cmd/hashimg
-    binary: >-
-      {{- if .IsSnapshot }}hashimg_{{ .ShortCommit }}
-      {{- else }}hashimg_{{ .Tag }}_{{ .Os }}_
-      {{- if (eq .Arch "amd64") }}x86_64
-      {{- else }}{{ .Arch }}{{ end }}
-      {{- end }}
-      {{- if not (eq .Amd64 "v2") }}_{{ .Amd64 }}{{ end }}
+    binary: hashimg
     env:
       - CGO_ENABLED=0
     flags:
@@ -29,43 +23,9 @@ builds:
     goamd64:
       - v2
       - v3
-    ignore:
-      - goos: windows
     hooks:
       post: # Hook to run after the build
         - upx --best --lzma -qq --force-overwrite --force-macos {{ .Path }}
-
-  - id: "upx-windows"
-    main: ./cmd/hashimg
-    binary: >-
-      {{- if .IsSnapshot }}hashimg_{{ .ShortCommit }}
-      {{- else }}hashimg_{{ .Tag }}_{{ .Os }}_
-      {{- if (eq .Arch "amd64") }}x86_64
-      {{- else }}{{ .Arch }}{{ end }}
-      {{- end }}
-      {{- if not (eq .Amd64 "v2") }}_{{ .Amd64 }}{{ end }}
-    env:
-      - CGO_ENABLED=0
-    flags:
-      - -trimpath
-    gcflags:
-      - "all=-B -l=120"
-    ldflags:
-      - -s -w
-      - -X github.com/jaeiya/hashimg/internal.appVersion={{ .Version }}
-      - -X github.com/jaeiya/hashimg/internal.commitSha={{ .ShortCommit }}
-    goarch:
-      - amd64
-    goamd64:
-      - v2
-      - v3
-    ignore:
-      - goos: linux
-      - goos: darwin
-    hooks:
-      post: # Hook to run after the build
-        - upx --best --lzma -qq --force-overwrite {{ .Path }}
-    no_unique_dist_dir: true
 
   - id: "no-upx"
     main: ./cmd/hashimg
@@ -89,32 +49,23 @@ builds:
         goarch: arm64
 
 snapshot:
-  version_template: "#{{ .ShortCommit }}"
+  version_template: "build-{{ .ShortCommit }}"
 
 archives:
   - id: unix
     name_template: >-
-      hashimg_{{ .Tag }}_{{ .Os }}_
+      {{ .Binary }}_
+      {{- if .IsSnapshot }}
+      {{ .ShortCommit }}_
+      {{- else }}{{ .Tag }}_
+      {{- end }}
+      {{- .Os }}_
       {{- if (eq .Arch "amd64") }}x86_64
       {{- else }}{{ .Arch }}{{ end }}
       {{- if not (eq .Amd64 "v2") }}_{{ .Amd64 }}{{ end }}
-    builds:
-      - no-upx
-      - upx
-
-  - id: windows
-    name_template: >-
-      hashimg_{{ .Tag }}_{{ .Os }}_
-      {{- if (eq .Arch "amd64") }}x86_64
-      {{- else }}{{ .Arch }}{{ end }}
-      {{- if not (eq .Amd64 "v2") }}_{{ .Amd64 }}{{ end }}
-    builds:
-      - upx-windows
-    format: binary
-    files:
-      - none*
-    wrap_in_directory: false
-    strip_binary_directory: true
+    format_overrides:
+      - goos: windows
+        format: zip
 
 changelog:
   sort: asc

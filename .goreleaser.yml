@@ -1,20 +1,38 @@
 version: 2
 
 builds:
-  - main: ./cmd/hashimg
+  - id: "upx"
+    main: ./cmd/hashimg
     binary: hashimg
+    env:
+      - CGO_ENABLED=0
     flags:
       - -trimpath
     gcflags:
       - "all=-B -l=120"
-    env:
-      - CGO_ENABLED=0
+    ldflags:
+      - -s -w -X github.com/jaeiya/hashimg/internal.AppVersion={{ .Tag }}
     goarch:
       - amd64
-      - arm64
     goamd64:
       - v2
-      - v3
+    hooks:
+      post: # Hook to run after the build
+        - upx --best --lzma -qq --force-overwrite --force-macos {{ .Path }}
+
+  - id: "no-upx"
+    main: ./cmd/hashimg
+    binary: hashimg
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    gcflags:
+      - "all=-B -l=120"
+    ldflags:
+      - -s -w -X github.com/jaeiya/hashimg/internal.AppVersion={{ .Tag }}
+    goarch:
+      - arm64
 
 changelog:
   sort: asc
@@ -56,9 +74,7 @@ changelog:
       order: 999
 
 archives:
-  - format_overrides:
+  - name_template: "{{ .ProjectName }}_{{ .Tag }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
       - goos: windows
         format: zip
-
-universal_binaries:
-  - replace: true

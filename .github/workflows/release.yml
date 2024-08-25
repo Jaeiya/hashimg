@@ -21,9 +21,7 @@ jobs:
 
       - name: Download UPX
         run: |
-          wget https://github.com/upx/upx/releases/download/v4.2.4/upx-4.2.4-amd64_linux.tar.xz
-          tar -xvf upx-4.2.4-amd64_linux.tar.xz
-          sudo mv upx-4.2.4-amd64_linux/upx /usr/local/bin/
+          curl -L https://github.com/upx/upx/releases/download/v4.2.4/upx-4.2.4-amd64_linux.tar.xz | tar Jxvf - -C /usr/local/bin --strip-components=1 upx-4.2.4-amd64_linux/upx
 
       - name: Set up Go
         uses: actions/setup-go@v5

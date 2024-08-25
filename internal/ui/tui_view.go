@@ -50,8 +50,13 @@ var (
 		"SSD - Solid State Drive (Flash)",
 	}
 
-	footerText = footerStyle.Render(
-		"Hashimg " + internal.GetVersion() + " - Press Esc, Ctrl+C, or Q to quit",
+	footerText = fmt.Sprintf(
+		"%s %s %s",
+		footerStyle.Render("Hashimg"),
+		getPrettyVersion(),
+		lipgloss.NewStyle().
+			Foreground(lipgloss.Color(darkColor)).
+			Render("- Press Esc, Ctrl+C, or Q to quit"),
 	)
 
 	CautionStyle = baseStyle.
@@ -265,4 +270,12 @@ func formatDuration(d time.Duration) string {
 	default:
 		return fmt.Sprintf("%d"+style.Render("ns"), d.Nanoseconds())
 	}
+}
+
+func getPrettyVersion() string {
+	v := internal.GetVersion()
+	if strings.Contains(v, "build-") {
+		return lipgloss.NewStyle().Foreground(lipgloss.Color("#6000FF")).Render(v)
+	}
+	return lipgloss.NewStyle().Foreground(lipgloss.Color("#009E7B")).Render(v)
 }

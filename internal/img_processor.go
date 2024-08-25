@@ -292,8 +292,16 @@ func (ip *ImageProcessor) calcImageHashes(bufferSize int64) (HashResult, error) 
 
 	hasher.Wait()
 
-	if hashErr := verifyHashResult(hr); hashErr != nil {
-		return hr, hashErr
+	for _, r := range hr.newHashesInfo {
+		if r.err != nil {
+			return HashResult{}, r.err
+		}
+	}
+
+	for _, r := range hr.oldHashesInfo {
+		if r.err != nil {
+			return HashResult{}, r.err
+		}
 	}
 
 	return hr, nil
@@ -431,22 +439,6 @@ func (ip *ImageProcessor) renameImages(hi HashInfo, newImgHash string) error {
 	if err != nil {
 		return err
 	}
-	return nil
-}
-
-func verifyHashResult(hr HashResult) error {
-	for _, r := range hr.newHashesInfo {
-		if r.err != nil {
-			return r.err
-		}
-	}
-
-	for _, r := range hr.oldHashesInfo {
-		if r.err != nil {
-			return r.err
-		}
-	}
-
 	return nil
 }
 

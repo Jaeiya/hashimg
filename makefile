@@ -64,3 +64,6 @@ setup-macos: install-go-macos install-goreleaser
 
 dev:
 	goreleaser release --snapshot --clean --config .goreleaser.dev.yml
+
+snapshot:
+	goreleaser release --snapshot --clean

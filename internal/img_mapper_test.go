@@ -20,7 +20,7 @@ func TestImageMapper(t *testing.T) {
 		t.Parallel()
 		a := assert.New(t)
 		_, err := MapImages("", hashPrefix)
-		a.ErrorContains(err, "system cannot find the file")
+		a.Error(err)
 	})
 
 	t.Run("should error if directory is empty", func(t *testing.T) {

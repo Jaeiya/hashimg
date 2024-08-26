@@ -89,8 +89,8 @@ file3.webp
 0x@6f3fef6dc51c7996a74992b70d0c35f3.webp
 ```
 
-The `0x@` is a unique identifier so that my program knows the following characters are actually
-part of the files calculated hash.
+The `0x@` is a unique identifier so that my program knows the file name is part of the calculated
+hash of the file.
 
 ## Developer Instructions
 

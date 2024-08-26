@@ -121,17 +121,29 @@ func (m TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case StateDoHashWork:
 		m.state = StateHashProgressing
-		go m.imgProcessor.ProcessImages(m.isHDD)
+		go func() {
+			err := m.imgProcessor.ProcessImages(m.isHDD)
+			// Errors are handled by status
+			_ = err
+		}()
 		return m, m.pollProgressStatus()
 
 	case StateDoUpdateWork:
 		m.state = StateUpdateProgressing
-		go m.imgProcessor.UpdateImages()
+		go func() {
+			err := m.imgProcessor.UpdateImages()
+			// Errors are handled by status
+			_ = err
+		}()
 		return m, m.pollProgressStatus()
 
 	case StateDoHashReviewWork:
 		m.state = StateHashProgressing
-		go m.imgProcessor.ProcessImagesForReview(m.isHDD)
+		go func() {
+			err := m.imgProcessor.ProcessImagesForReview(m.isHDD)
+			// Errors are handled by status
+			_ = err
+		}()
 		return m, m.pollProgressStatus()
 
 	case StateDoUpdateReviewWork:
@@ -142,7 +154,11 @@ func (m TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.workErr.err = err
 			return m.Update(msg)
 		}
-		go m.imgProcessor.UpdateImages()
+		go func() {
+			err := m.imgProcessor.UpdateImages()
+			// Errors are handled by status
+			_ = err
+		}()
 		return m, m.pollProgressStatus()
 
 	case StateUserReview:

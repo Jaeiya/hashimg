@@ -183,7 +183,8 @@ func (ip *ImageProcessor) ProcessImagesForReview(useBuffer bool) error {
 	ip.Status.NewImageCount = int32(len(pi.NewImagesByHash) - cachedImageCount)
 
 	if ip.OpenReviewFolder {
-		utils.OpenFolder(ip.dupeReviewFolder)
+		err := utils.OpenFolder(ip.dupeReviewFolder)
+		return err
 	}
 
 	return nil

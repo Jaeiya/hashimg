@@ -539,7 +539,7 @@ func TestReviewRestoration(t *testing.T) {
 		t.Parallel()
 		a := assert.New(t)
 		dir := t.TempDir()
-		writeFiles(
+		err := writeFiles(
 			dir,
 			[]string{
 				"t1.jpg",
@@ -552,6 +552,7 @@ func TestReviewRestoration(t *testing.T) {
 			},
 			[]string{"0", "0", "1", "1", "2", "2", "2"},
 		)
+		require.NoError(t, err)
 
 		iMap, err := MapImages(dir, hashPrefix)
 		a.NoError(err)

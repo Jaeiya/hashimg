@@ -701,7 +701,8 @@ func TestCalcBuffer(t *testing.T) {
 				return
 			}
 
-			a.Equal(totalSize/fileCount, avgCount)
+			// Should round up
+			a.Equal((totalSize+fileCount-1)/fileCount, avgCount)
 		})
 	}
 

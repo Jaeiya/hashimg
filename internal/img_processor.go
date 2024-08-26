@@ -270,7 +270,8 @@ func (ip *ImageProcessor) calcBufferSize(useBuffer bool) (int64, error) {
 		return fileCount, nil
 	}
 
-	return totalSize / fileCount, nil
+	// We want to round up here
+	return (totalSize + fileCount - 1) / fileCount, nil
 }
 
 func (ip *ImageProcessor) calcImageHashes(bufferSize int64) (HashResult, error) {

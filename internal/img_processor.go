@@ -84,6 +84,8 @@ func (ip *ImageProcessor) ProcessImages(useBuffer bool) error {
 		return err
 	}
 
+	ip.Status.BufferSize = bufferSize
+
 	hashResult, err := ip.calcImageHashes(bufferSize)
 	if err != nil {
 		ip.Status.HashErr = err

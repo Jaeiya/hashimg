@@ -193,6 +193,7 @@ func (m TuiModel) viewResults() string {
 		{"Cached", strconv.Itoa(int(status.CachedImageCount)), resultsCacheStyle},
 		{"New", strconv.Itoa(int(status.NewImageCount)), resultsNewStyle},
 		{"", "", resultsValueStyle},
+		{"Buffer Size", formatBytes(status.BufferSize), resultsValueStyle},
 		{"Analyze Speed", formatDuration(status.AnalyzeTook), resultsValueStyle},
 		{"Hash Speed", formatDuration(status.HashingTook), resultsValueStyle},
 		{"Filter Speed", formatDuration(status.FilterTook), resultsValueStyle},
@@ -210,8 +211,9 @@ func (m TuiModel) viewResults() string {
 			strings.Contains(item.value, "ns") &&
 			!strings.Contains(item.value, ".")
 
-		// Ignore instantaneous speed results
-		if isInstant {
+		isZeroBytes := item.value == "0 Bytes"
+
+		if isInstant || isZeroBytes {
 			continue
 		}
 		s += fmt.Sprintf(
@@ -256,6 +258,22 @@ func viewYesNo(question string, header string, isYes func() bool) string {
 	}
 	s += "\n\n" + footerText + "\n"
 	return s
+}
+
+func formatBytes(bytes int64) string {
+	if bytes == 0 {
+		return "0 Bytes"
+	}
+
+	suffixes := []string{"Bytes", "KiB", "MiB", "GiB", "TiB"}
+	for _, suffix := range suffixes {
+		if bytes < 1024 {
+			return fmt.Sprintf("%d %s", bytes, timeNotationStyle.Render(suffix))
+		}
+		bytes /= 1024
+	}
+
+	panic("unsupported size when formatting bytes")
 }
 
 func formatDuration(d time.Duration) string {

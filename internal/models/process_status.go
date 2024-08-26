@@ -10,6 +10,7 @@ type ProcessStatus struct {
 	DupeImageCount   int32
 	CachedImageCount int32
 	NewImageCount    int32
+	BufferSize       int64
 	// Progress of calculating file hashes
 	HashProgress int32
 	// Progress of renaming and/or removing files

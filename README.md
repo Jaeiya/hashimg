@@ -21,63 +21,91 @@ A quaint little hobby utility that I created for the hoard of random images I ha
 reads all images within a folder (**not** including sub-folders) and compares them to one another.
 It then deletes the duplicates and renames the remaining ones to their hash.
 
-The hash I'm using to compare the files is only 32 out of 64 characters. I didn't want the names to be
-64 characters long as that's a bit unruly, but I also wanted a way to cache the hash in a convenient way.
-Now, even though I've truncated the hash to 32 characters, the probability of an accidental collision on 1
-billion images is `1 in 2^64` or `1 in 18.4 Quintillion`.
+## Table of Contents
 
-Those odds are what we call a "virtual impossibility." Unless you're working with significantly more
-than 1 billion images, you won't have to worry about collisions. In most cases, you'll probably have
-folders named based on date, theme, or event...in which case if you ever **were** to accumulate
-significantly more than a billion images, they likely wouldn't all be in a single folder.
+- [Table of Contents](#table-of-contents)
+  - [Installation](#installation)
+    - [Binary Releases](#binary-releases)
+    - [Go CLI](#using-go-cli)
+  - [FAQ](#faq)
+    - [Does it find all duplicates?](#will-it-find-all-duplicate-images-no-matter-what)
+    - [How likely are false-positives?](#how-likely-are-false-positives)
+    - [Will it auto-delete my images?](#will-it-automatically-delete-my-images)
+    - [What will my files end up looking like?](#what-will-my-files-look-like-after-its-done)
+  - [Developer Instructions](#developer-instructions)
+    - [Build Dev](#build-development-binaries)
+    - [Build Snapshot](#build-snapshot-of-production-archives)
+  - [Feedback](#feedback)
+  - [Shout-Out](#shout-out)
 
-### Accuracy
+## Installation
 
-As long as an image file has exactly the same dimensions and data as another image, it will be found
-to be a duplicate. This means that images which have the same _visual_ appearance, will **not**
-necessarily be distinguished by the program. If you have two images that are _visually_ identical,
-but one is larger than the other, there's no way for the program to know that they're identical
-because their **data** is not identical.
+### Binary Releases
 
-So while it may be virtually impossible to get false positives (flagging images that are dupes, but are
-not), it will **literally** be impossible to find duplicates among only the _visually_ identical, if
-the data isn't also identical. If most of your images are duplicates simply because some are larger
-than others, then this program is not the right tool; however if you have a lot of exact copies of
-images in a folder, then this program is perfect.
+For Linux, MacOS (10.15+) Catalina, and Windows, you can download them from the [Releases Page](https://github.com/Jaeiya/hashimg/releases)
 
-### I don't trust you...
+### Using Go CLI
 
-It can be a big ask to trust a relatively random piece of software to process your important images,
-so in light of that, you also have the option to review the duplicate images before deletion.
-After processing your images, the program will ask you if you want to keep them; it's entirely
-up to you!
+```bash
+go install github.com/Jaeiya/hashimg@latest
+```
 
-If you've chosen to review your images, then a `__dupes` folder will be created in the current
-directory for the dupes. This folder will be automagically opened for you to review. If you **do**
-decide to keep the duplicate images, the update process will abort and you can do whatever you
-want with the duplicate images in the `__dupes` folder.
+## FAQ
 
-### Installing
+### Will it find all duplicate images no matter what?
 
-You can download this app in multiple flavors (platforms) from the [Releases] page. It supports Windows,
-Linux, and MacOS. If you're using a modern processor, you can use the `v2` or `v3` versions. You may
-or may not get better performance when using those, but it will likely be negligible.
+No. The file data must be identical. Just because images _appear_ to be identical, does not mean
+that they are. If those images have different resolutions or one is compressed more than another,
+they will not be flagged as duplicates. An image is **only** considered a duplicate if it has
+the **exact** same data as another image, including meta-data.
 
-After you download the version you want, you can extract it to any folder you like and execute it
-from a terminal pointing at that directory. The best way to use this application is to set it up in
-your global `PATH` environment variable; that way it can be accessed from any folder in your terminal.
+### How likely are false-positives?
 
-## Build Instructions
+Virtually impossible. In order for there to even be a reasonable possibility of false-positives,
+you would need to have quadrillions of images. Those images would also have to all be in
+a single folder. So the likelihood of an accidental deletion of a novel image, is virtually zero.
+
+### Will it automatically delete my images?
+
+Yes and No. There is a review option that will ask you to review the images before deletion takes
+place. During this period, you can choose to keep the images that were detected as duplicates,
+or to delete them. If you choose to keep them, the program aborts and your files are completely
+untouched.
+
+If choose **not** to review the duplicate images, then all duplicates are automatically deleted
+and your existing images will be renamed to their hash, to make future scans faster.
+
+### What will my files look like after it's done?
+
+```
+=== Before ===
+file1.png
+file2.bmp
+file3.webp
+
+=== After ===
+0x@c147efcfc2d7ea666a9e4f5187b115c9.png
+0x@3377870dfeaaa7adf79a374d2702a3fd.bmp
+0x@6f3fef6dc51c7996a74992b70d0c35f3.webp
+```
+
+The `0x@` is a unique identifier so that my program knows the following characters are actually
+part of the files calculated hash.
+
+## Developer Instructions
 
 You'll need to have Go `1.22.5` or higher installed. If you're using `1.23.x` or higher - as of
-2024-08-25 - you will end up with significantly larger binaries. Not sure if that's a feature
-or a bug, but...that's how it is.
+`2024-08-25` - you will end up with significantly larger binaries. Not sure if that's a feature
+or a bug but...that's how it is.
 
 All of the following builds are technically production builds, in terms of how the binaries are
 optimized. Even if you build using the `dev` target, you're still getting the most optimized
-build possible.
+build possible. The cold start time can take a little bit, but subsequent builds are typically
+1s or less.
 
-### Build development artifacts to dist dir
+The output of all builds is the `./dist` dir
+
+### Build development binaries
 
 This will build 3 binaries, one for each platform (linux, darwin, & windows), all of which are
 `x86_64` compatible.
@@ -86,21 +114,22 @@ This will build 3 binaries, one for each platform (linux, darwin, & windows), al
 make dev
 ```
 
-### Build snapshot of production artifacts to dist dir
+### Build snapshot of production archives
 
 This is a preview of how the builds will look in production, however they do use a snapshot
-version, which will not be used when run through the github action.
+version, which will not be used in production.
 
 ```bash
 make snapshot
 ```
 
-### Issues
+## Feedback
 
 If you notice any bugs, feel free to create an issue. I do use this on my own images, so I won't shy
-away from critiques or suggestions that might make it better.
+away from critiques or suggestions that might make it better. It won't be my main focus, but I am
+active enough that I will definitely respond.
 
-### Shout-out
+## Shout-out
 
 I'd like to thank the creators of [Lip Gloss] and [Bubble Tea] for making an incredibly easy framework
 for creating useful TUIs. I didn't want to have to build all of it out myself, so thanks to the

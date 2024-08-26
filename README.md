@@ -33,6 +33,7 @@ It then deletes the duplicates and renames the remaining ones to their hash.
   - [Will it auto-delete my images?](#will-it-automatically-delete-my-images)
   - [What will my files end up looking like?](#what-will-my-files-look-like-after-its-done)
 - [Developer Instructions](#developer-instructions)
+  - [Install Prerequisites](#install-prerequisites)
   - [Build Dev](#build-development-binaries)
   - [Build Snapshot](#build-snapshot-of-production-archives)
 - [Feedback](#feedback)
@@ -104,6 +105,27 @@ build possible. The cold start time can take a little bit, but subsequent builds
 1s or less.
 
 The output of all builds is the `./dist` dir
+
+### Install Prerequisites
+
+If you don't have Go or Goreleaser installed, then the following make targets will attempt to
+install them. The linux version is only partially tested and the MacOS isn't tested at all
+since I don't have an Apple device.
+
+If it fails for any reason and you do in fact have Go installed, then you can just execute
+`make install-goreleaser`. Because it's using the Go CLI, there should be no issues.
+
+```bash
+make setup-windows
+```
+
+```bash
+make setup-linux
+```
+
+```bash
+make setup-macos
+```
 
 ### Build development binaries
 

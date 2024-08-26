@@ -15,6 +15,9 @@ of the latest commit hash.
 */
 func GetVersion() string {
 	if appVersion == "" {
+		if commitSha == "" {
+			return "invalid version"
+		}
 		return commitSha[:8]
 	}
 	return appVersion

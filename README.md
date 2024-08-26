@@ -24,19 +24,19 @@ It then deletes the duplicates and renames the remaining ones to their hash.
 ## Table of Contents
 
 - [Table of Contents](#table-of-contents)
-  - [Installation](#installation)
-    - [Binary Releases](#binary-releases)
-    - [Go CLI](#using-go-cli)
-  - [FAQ](#faq)
-    - [Does it find all duplicates?](#will-it-find-all-duplicate-images-no-matter-what)
-    - [How likely are false-positives?](#how-likely-are-false-positives)
-    - [Will it auto-delete my images?](#will-it-automatically-delete-my-images)
-    - [What will my files end up looking like?](#what-will-my-files-look-like-after-its-done)
-  - [Developer Instructions](#developer-instructions)
-    - [Build Dev](#build-development-binaries)
-    - [Build Snapshot](#build-snapshot-of-production-archives)
-  - [Feedback](#feedback)
-  - [Shout-Out](#shout-out)
+- [Installation](#installation)
+  - [Binary Releases](#binary-releases)
+  - [Go CLI](#using-go-cli)
+- [FAQ](#faq)
+  - [Does it find all duplicates?](#will-it-find-all-duplicate-images-no-matter-what)
+  - [How likely are false-positives?](#how-likely-are-false-positives)
+  - [Will it auto-delete my images?](#will-it-automatically-delete-my-images)
+  - [What will my files end up looking like?](#what-will-my-files-look-like-after-its-done)
+- [Developer Instructions](#developer-instructions)
+  - [Build Dev](#build-development-binaries)
+  - [Build Snapshot](#build-snapshot-of-production-archives)
+- [Feedback](#feedback)
+- [Shout-Out](#shout-out)
 
 ## Installation
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -575,6 +576,134 @@ func TestReviewRestoration(t *testing.T) {
 		a.Contains(fileNames, fmt.Sprintf("%s_1.jpg", calcSha256("1")))
 		a.Contains(fileNames, fmt.Sprintf("%s_1.jpg", calcSha256("2")))
 	})
+
+}
+
+func TestCalcBuffer(t *testing.T) {
+	hashPrefix := "0x@"
+
+	md := []MockImgProcData{
+		{
+			should: "calculate average buffer if files are the same size",
+			files: []string{
+				fmt.Sprintf("0x@%s.jpg", calcSha256("10")),
+				fmt.Sprintf("0x@%s.jpg", calcSha256("11")),
+				fmt.Sprintf("0x@%s.jpg", calcSha256("12")),
+				fmt.Sprintf("0x@%s.jpg", calcSha256("13")),
+				"t1.jpg",
+				"t2.jpg",
+				"t3.jpg",
+				"t4.jpg",
+				"t6.jpg",
+				"t7.jpg",
+			},
+			fileContent: []string{
+				"0",
+				"1",
+				"2",
+				"3",
+				"this is some longer data 1",
+				"this is some longer data 2",
+				"this is some longer data 3",
+				"this is some longer data 4",
+				"this is some longer data 5",
+				"this is some longer data 6",
+			},
+		},
+		{
+			should: "ignore cached files",
+			files: []string{
+				fmt.Sprintf("0x@%s.jpg", calcSha256("10")),
+				fmt.Sprintf("0x@%s.jpg", calcSha256("10")),
+				fmt.Sprintf("0x@%s.jpg", calcSha256("10")),
+				fmt.Sprintf("0x@%s.jpg", calcSha256("10")),
+				fmt.Sprintf("0x@%s.jpg", calcSha256("10")),
+			},
+			fileContent: []string{
+				"1", "2", "3", "4", "5",
+			},
+		},
+		{
+			should: "produce average from all non-cached random size files",
+			files: []string{
+				fmt.Sprintf("0x@%s.jpg", calcSha256("10")),
+				fmt.Sprintf("0x@%s.jpg", calcSha256("10")),
+				fmt.Sprintf("0x@%s.jpg", calcSha256("10")),
+				fmt.Sprintf("0x@%s.jpg", calcSha256("10")),
+				fmt.Sprintf("0x@%s.jpg", calcSha256("10")),
+				"t1.jpg",
+				"t2.jpg",
+				"t3.jpg",
+				"t4.jpg",
+				"t5.jpg",
+				"t6.jpg",
+				"t7.jpg",
+				"t8.jpg",
+				"t9.jpg",
+				"t10.jpg",
+			},
+			fileContent: []string{
+				"1", "2", "3", "4", "5",
+				"some random size",
+				"more random sized content",
+				"whatever I want",
+				"test data",
+				"3821",
+				"38812348218482384828348823848238482348234",
+				"9192348971239487283482384",
+				"51",
+				"1282992382",
+				"and last but not least",
+			},
+		},
+	}
+
+	for _, d := range md {
+		t.Run("should "+d.should, func(t *testing.T) {
+			t.Parallel()
+			a := assert.New(t)
+			dir := t.TempDir()
+
+			err := writeFiles(dir, d.files, d.fileContent)
+			require.NoError(t, err)
+
+			files, err := os.ReadDir(dir)
+			require.NoError(t, err)
+			var fileCount int64
+			var totalSize int64
+			for _, f := range files {
+				if f.IsDir() {
+					continue
+				}
+				if strings.Contains(f.Name(), "0x@") {
+					continue
+				}
+				info, err := f.Info()
+				require.NoError(t, err)
+				totalSize += info.Size()
+				fileCount += 1
+			}
+
+			iMap, err := MapImages(dir, hashPrefix)
+			a.NoError(err)
+			imgProcessor := NewImageProcessor(ImageProcessorConfig{
+				WorkingDir: dir,
+				Prefix:     hashPrefix,
+				ImageMap:   iMap,
+				HashLength: hashLength,
+			})
+
+			avgCount, err := imgProcessor.calcBufferSize(true)
+			require.NoError(t, err)
+
+			if fileCount == 0 {
+				a.Equal(fileCount, avgCount)
+				return
+			}
+
+			a.Equal(totalSize/fileCount, avgCount)
+		})
+	}
 
 }
 

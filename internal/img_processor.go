@@ -247,15 +247,28 @@ func (ip *ImageProcessor) calcBufferSize(useBuffer bool) (int64, error) {
 	}
 
 	var totalSize int64
+	var fileCount int64
 	for _, entry := range files {
+		if entry.IsDir() {
+			continue
+		}
+		// We only need the size of images actually being hashed
+		if ip.imageMap[entry.Name()] == Cached {
+			continue
+		}
 		info, err := entry.Info()
 		if err != nil {
 			return 0, err
 		}
+		fileCount += 1
 		totalSize += info.Size()
 	}
 
-	return totalSize / int64(len(files)), nil
+	if fileCount == 0 {
+		return fileCount, nil
+	}
+
+	return totalSize / fileCount, nil
 }
 
 func (ip *ImageProcessor) calcImageHashes(bufferSize int64) (HashResult, error) {

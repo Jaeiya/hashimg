@@ -1,6 +1,6 @@
 
 GO_INSTALLED := $(shell command -v go version)
-GO_VERSION := 1.22.6
+GO_VERSION := 1.22
 GORELEASER_EXISTS := $(shell command -v goreleaser version)
 INSTALL_GORELEASER := go install github.com/goreleaser/goreleaser/v2@latest
 

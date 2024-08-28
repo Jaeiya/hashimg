@@ -32,6 +32,7 @@ It then deletes the duplicates and renames the remaining ones to their hash.
   - [How likely are false-positives?](#how-likely-are-false-positives)
   - [Will it auto-delete my images?](#will-it-automatically-delete-my-images)
   - [What will my files end up looking like?](#what-will-my-files-look-like-after-its-done)
+- [Future Updates](#future-updates)
 - [Developer Instructions](#developer-instructions)
   - [Install Prerequisites](#install-prerequisites)
   - [Build Dev](#build-development-binaries)
@@ -92,6 +93,22 @@ file3.webp
 
 The `0x@` is a unique identifier so that my program knows the file name is part of the calculated
 hash of the file.
+
+## Future Updates
+
+The program at this point **is** feature complete. The review feature was actually something a friend
+had mentioned, so it wasn't even planned, but I added it anyway. The only future feature that makes
+sense at this point, is "similar image" detection. Right now only identical images are detected,
+but obviously this is inferior to comparing them based on their _visual_ similarity.
+
+I might look into [pHash] support, which is a hashing technique known as "perceptual hashing"
+which quantifies the _features_ of an image to generate a hash that can be compared for similarities.
+If you're interested in the more technical details, you can read about it [here](https://www.hackerfactor.com/blog/index.php?/archives/432-Looks-Like-It.html)
+
+That all being said, I don't plan to work on this project for awhile unless I discover bugs or better
+ways to do what the program is already doing.
+
+[pHash]: https://github.com/corona10/goimagehash
 
 ## Developer Instructions
 

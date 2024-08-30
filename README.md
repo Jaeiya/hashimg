@@ -146,8 +146,8 @@ make setup-macos
 
 ### Build development binaries
 
-This will build 3 binaries, one for each platform (linux, darwin, & windows), all of which are
-`x86_64` compatible.
+This will build 3 binaries to the `/dist` dir, one for each platform (linux, darwin, & windows),
+all of which are `x86_64` compatible.
 
 ```bash
 make dev
@@ -156,7 +156,7 @@ make dev
 ### Build snapshot of production archives
 
 This is a preview of how the builds will look in production, however they do use a snapshot
-version, which will not be used in production.
+version, which will not be used in production. They also build to the `/dist` dir.
 
 ```bash
 make snapshot

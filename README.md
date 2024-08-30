@@ -44,7 +44,7 @@ It then deletes the duplicates and renames the remaining ones to their hash.
 
 ### Binary Releases
 
-For Linux, MacOS (10.15+) Catalina, and Windows, you can download them from the [Releases Page](https://github.com/Jaeiya/hashimg/releases)
+For Linux, MacOS (10.15+ Catalina), and Windows, you can download them from the [Releases Page](https://github.com/Jaeiya/hashimg/releases)
 
 ### Using Go CLI
 

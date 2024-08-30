@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/jaeiya/hashimg/internal"
+	"github.com/jaeiya/hashimg/lib"
 )
 
 const (
@@ -66,7 +66,7 @@ type TuiModel struct {
 	keepDupes             bool
 	hddIndex              int
 	isHDD                 bool
-	imgProcessor          *internal.ImageProcessor
+	imgProcessor          *lib.ImageProcessor
 	workErr               MsgErr
 	hashProgressBar       progress.Model
 	updateProgressBar     progress.Model
@@ -74,7 +74,7 @@ type TuiModel struct {
 	updateProgressPercent float64
 }
 
-func NewTUI(ip *internal.ImageProcessor) TuiModel {
+func NewTUI(ip *lib.ImageProcessor) TuiModel {
 	return TuiModel{
 		state:             StateConsentSelection,
 		hashProgressBar:   progress.New(progress.WithGradient("#34C8FF", brightColor)),

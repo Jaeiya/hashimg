@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/jaeiya/hashimg/internal"
+	"github.com/jaeiya/hashimg/lib"
 )
 
 const (
@@ -291,7 +291,7 @@ func formatDuration(d time.Duration) string {
 }
 
 func getPrettyVersion() string {
-	v := internal.GetVersion()
+	v := lib.GetVersion()
 	if strings.Contains(v, "build-") {
 		return lipgloss.NewStyle().Foreground(lipgloss.Color("#6000FF")).Render(v)
 	}

@@ -6,8 +6,8 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/jaeiya/hashimg/internal"
-	"github.com/jaeiya/hashimg/internal/ui"
+	"github.com/jaeiya/hashimg/lib"
+	"github.com/jaeiya/hashimg/lib/ui"
 )
 
 const (
@@ -18,9 +18,9 @@ const (
 
 func main() {
 	wd, _ := os.Getwd()
-	iMap, err := internal.MapImages(wd, hashPrefix)
+	iMap, err := lib.MapImages(wd, hashPrefix)
 	if err != nil {
-		if errors.Is(err, internal.ErrNoImages) {
+		if errors.Is(err, lib.ErrNoImages) {
 			fmt.Println(ui.CautionStyle.Render("No images found in current directory"))
 			os.Exit(0)
 			return
@@ -28,8 +28,8 @@ func main() {
 		panic(err)
 	}
 
-	imgProcessor := internal.NewImageProcessor(
-		internal.ImageProcessorConfig{
+	imgProcessor := lib.NewImageProcessor(
+		lib.ImageProcessorConfig{
 			WorkingDir:       wd,
 			Prefix:           hashPrefix,
 			ImageMap:         iMap,

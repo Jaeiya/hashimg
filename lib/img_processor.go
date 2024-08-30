@@ -1,4 +1,4 @@
-package internal
+package lib
 
 import (
 	"fmt"
@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jaeiya/hashimg/internal/models"
-	"github.com/jaeiya/hashimg/internal/utils"
+	"github.com/jaeiya/hashimg/lib/models"
+	"github.com/jaeiya/hashimg/lib/utils"
 )
 
 var mux = sync.Mutex{}

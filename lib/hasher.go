@@ -1,4 +1,4 @@
-package internal
+package lib
 
 import (
 	"bufio"
@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/jaeiya/hashimg/internal/utils"
+	"github.com/jaeiya/hashimg/lib/utils"
 )
 
 type HashResult struct {

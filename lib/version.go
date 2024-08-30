@@ -1,4 +1,4 @@
-package internal
+package lib
 
 // TODO  Use a getter to determine the version and switch between
 //

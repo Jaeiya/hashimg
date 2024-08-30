@@ -74,8 +74,9 @@ place. During this period, you can choose to keep the images that were detected 
 or to delete them. If you choose to keep them, the program aborts and your files are completely
 untouched.
 
-If choose **not** to review the duplicate images, then all duplicates are automatically deleted
-and your existing images will be renamed to their hash, to make future scans faster.
+If you choose **not** to review the duplicate images, then all duplicates are automatically deleted
+and your existing images will be renamed to their hash. Renaming the images to their hash allows
+for faster future scans.
 
 ### What will my files look like after it's done?
 
@@ -112,7 +113,7 @@ ways to do what the program is already doing.
 
 ## Developer Instructions
 
-You'll need to have Go `1.22.5` or higher installed. If you're using `1.23.x` or higher - as of
+You'll need to have Go `1.22.x` or higher installed. If you're using `1.23.x` or higher - as of
 `2024-08-25` - you will end up with significantly larger binaries. Not sure if that's a feature
 or a bug but...that's how it is.
 

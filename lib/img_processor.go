@@ -255,6 +255,10 @@ func (ip *ImageProcessor) calcBufferSize(useBuffer bool) (int64, error) {
 		if entry.IsDir() {
 			continue
 		}
+		ext := filepath.Ext(entry.Name())
+		if _, isImg := imageExtensions[ext]; !isImg {
+			continue
+		}
 		// We only need the size of images actually being hashed
 		if ip.imageMap[entry.Name()] == Cached {
 			continue

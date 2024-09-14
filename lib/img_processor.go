@@ -146,7 +146,7 @@ func (ip *ImageProcessor) ProcessImagesForReview(useBuffer bool) error {
 	ip.isReviewProcess = true
 	pi := ip.processedImages
 
-	err = os.MkdirAll(ip.dupeReviewFolder, 0755)
+	err = os.MkdirAll(ip.dupeReviewFolder, 0o755)
 	if err != nil {
 		return err
 	}

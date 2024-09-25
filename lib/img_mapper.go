@@ -17,10 +17,15 @@ var imageExtensions = ImageExtMap{
 	".jpg":  ExtEnabled,
 	".jpeg": ExtEnabled,
 	".png":  ExtEnabled,
+	".apng": ExtEnabled,
+	".svg":  ExtEnabled,
 	".gif":  ExtEnabled,
+	".tiff": ExtEnabled,
+	".tif":  ExtEnabled,
 	".bmp":  ExtEnabled,
 	".webp": ExtEnabled,
 	".heic": ExtEnabled,
+	".heif": ExtEnabled,
 }
 
 type (

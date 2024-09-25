@@ -1,12 +1,10 @@
 package lib
 
-// TODO  Use a getter to determine the version and switch between
-//
-//	   real version and possible the commit hash, which can be
-//		 sent through build metadata, just like the version.
-var appVersion string
-var goVersion string
-var commitSha string
+var (
+	appVersion string
+	goVersion  string
+	commitSha  string
+)
 
 /*
 GetVersion returns the application version set by the build process.

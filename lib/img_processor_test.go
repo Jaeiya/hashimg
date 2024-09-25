@@ -529,7 +529,6 @@ func TestReviewProcess(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestReviewRestoration(t *testing.T) {
@@ -577,7 +576,6 @@ func TestReviewRestoration(t *testing.T) {
 		a.Contains(fileNames, fmt.Sprintf("%s_1.jpg", calcSha256("1")))
 		a.Contains(fileNames, fmt.Sprintf("%s_1.jpg", calcSha256("2")))
 	})
-
 }
 
 func TestCalcBuffer(t *testing.T) {
@@ -657,6 +655,33 @@ func TestCalcBuffer(t *testing.T) {
 				"and last but not least",
 			},
 		},
+		{
+			should: "calculate average buffer without including invalid extensions",
+			files: []string{
+				"t1.jpg",
+				"t2.jpg",
+				"t3.jpg",
+				"t4.jpg",
+				"t5.jpg",
+				"t6.bad",
+				"t7.bad",
+				"t8.bad",
+				"t9.bad",
+				"t10.bad",
+			},
+			fileContent: []string{
+				"0",
+				"0",
+				"0",
+				"0",
+				"0",
+				"38812348218482384828348823848238482348234",
+				"38812348218482384828348823848238482348234",
+				"38812348218482384828348823848238482348234",
+				"38812348218482384828348823848238482348234",
+				"38812348218482384828348823848238482348234",
+			},
+		},
 	}
 
 	for _, d := range md {
@@ -676,7 +701,7 @@ func TestCalcBuffer(t *testing.T) {
 				if f.IsDir() {
 					continue
 				}
-				if strings.Contains(f.Name(), "0x@") {
+				if strings.Contains(f.Name(), "0x@") || strings.Contains(f.Name(), ".bad") {
 					continue
 				}
 				info, err := f.Info()
@@ -706,7 +731,6 @@ func TestCalcBuffer(t *testing.T) {
 			a.Equal((totalSize+fileCount-1)/fileCount, avgCount)
 		})
 	}
-
 }
 
 func writeFiles(dir string, files []string, fileContent []string) error {

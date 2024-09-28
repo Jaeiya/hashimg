@@ -26,6 +26,7 @@ var imageExtensions = ImageExtMap{
 	".webp": ExtEnabled,
 	".heic": ExtEnabled,
 	".heif": ExtEnabled,
+	".avif": ExtEnabled,
 }
 
 type (

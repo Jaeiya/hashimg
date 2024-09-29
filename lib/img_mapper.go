@@ -21,19 +21,19 @@ const (
 )
 
 var imageExtensions = ImageExtMap{
+	".apng": ExtEnabled,
+	".avif": ExtEnabled,
+	".bmp":  ExtEnabled,
+	".gif":  ExtEnabled,
+	".heic": ExtEnabled,
+	".heif": ExtEnabled,
 	".jpg":  ExtEnabled,
 	".jpeg": ExtEnabled,
 	".png":  ExtEnabled,
-	".apng": ExtEnabled,
 	".svg":  ExtEnabled,
-	".gif":  ExtEnabled,
-	".tiff": ExtEnabled,
 	".tif":  ExtEnabled,
-	".bmp":  ExtEnabled,
+	".tiff": ExtEnabled,
 	".webp": ExtEnabled,
-	".heic": ExtEnabled,
-	".heif": ExtEnabled,
-	".avif": ExtEnabled,
 }
 
 func MapImages(dir, hashPrefix string) (ImageMap, error) {

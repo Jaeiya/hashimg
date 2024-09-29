@@ -6,11 +6,18 @@ import (
 	"strings"
 )
 
+type (
+	CacheStatus bool
+	ImageMap    map[string]CacheStatus
+	ExtState    bool
+	ImageExtMap map[string]ExtState
+)
+
 const (
-	NotCached   CacheStatus  = false
-	Cached      CacheStatus  = true
-	ExtEnabled  ImgExtStatus = true
-	ExtDisabled ImgExtStatus = false
+	NotCached   CacheStatus = false
+	Cached      CacheStatus = true
+	ExtEnabled  ExtState    = true
+	ExtDisabled ExtState    = false
 )
 
 var imageExtensions = ImageExtMap{
@@ -28,15 +35,6 @@ var imageExtensions = ImageExtMap{
 	".heif": ExtEnabled,
 	".avif": ExtEnabled,
 }
-
-type (
-	CacheStatus  bool
-	ImgExtStatus bool
-)
-
-type ImageMap map[string]CacheStatus
-
-type ImageExtMap map[string]ImgExtStatus
 
 func MapImages(dir, hashPrefix string) (ImageMap, error) {
 	dirEntries, err := os.ReadDir(dir)

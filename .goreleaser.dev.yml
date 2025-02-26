@@ -106,4 +106,4 @@ checksum:
   disable: true
 
 archives:
-  - format: binary
+  - formats: ["binary"]
